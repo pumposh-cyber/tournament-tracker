@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Edit - {{ tournament.event }}{% endblock %}
+
+{% block content %}
+<div class="form-page">
+    <a href="{{ url_for('tournament_detail', tournament_id=tournament.id) }}" class="back-link">Back to Details</a>
+    <h1>Edit Tournament</h1>
+
+    <form method="POST" class="tournament-form">
+        <div class="form-group">
+            <label for="event">Event Name</label>
+            <input type="text" id="event" name="event" value="{{ tournament.event }}" required>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="date">Start Date</label>
+                <input type="date" id="date" name="date" value="{{ tournament.date_start.strftime('%Y-%m-%d') }}" required>
+            </div>
+            <div class="form-group">
+                <label for="dates_display">Date Range Display</label>
+                <input type="text" id="dates_display" name="dates_display" value="{{ tournament.dates_display }}">
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="days">Day(s)</label>
+            <input type="text" id="days" name="days" value="{{ tournament.days }}">
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="city">City</label>
+                <input type="text" id="city" name="city" value="{{ tournament.city }}" required>
+            </div>
+            <div class="form-group">
+                <label for="venue">Venue</label>
+                <input type="text" id="venue" name="venue" value="{{ tournament.venue }}" required>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="hotel_recommendation">Hotel Recommendation</label>
+                <input type="text" id="hotel_recommendation" name="hotel_recommendation" value="{{ tournament.hotel_recommendation }}">
+            </div>
+            <div class="form-group">
+                <label for="hotel_link_notes">Hotel Link / Notes</label>
+                <input type="text" id="hotel_link_notes" name="hotel_link_notes" value="{{ tournament.hotel_link_notes }}">
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="car_rental_recommendation">Car Rental Recommendation</label>
+            <input type="text" id="car_rental_recommendation" name="car_rental_recommendation" value="{{ tournament.car_rental_recommendation }}">
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="hotel_booking_status">Hotel Booking Status</label>
+                <select id="hotel_booking_status" name="hotel_booking_status">
+                    <option value="">-- Select --</option>
+                    {% for status in ['Pending', 'In Progress', 'Booked', 'Completed', 'Required', 'Not needed', 'No'] %}
+                        <option value="{{ status }}" {% if tournament.hotel_booking_status == status %}selected{% endif %}>{{ status }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="car_booking_status">Car Booking Status</label>
+                <select id="car_booking_status" name="car_booking_status">
+                    <option value="">-- Select --</option>
+                    {% for status in ['Pending', 'Recommended', 'Completed', 'Required', 'Not needed', 'Maybe'] %}
+                        <option value="{{ status }}" {% if tournament.car_booking_status == status %}selected{% endif %}>{{ status }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="notes">Notes / Status</label>
+            <textarea id="notes" name="notes" rows="3">{{ tournament.notes }}</textarea>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a href="{{ url_for('tournament_detail', tournament_id=tournament.id) }}" class="btn">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

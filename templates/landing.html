@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Tournament Tracker - Sign In{% endblock %}
+
+{% block content %}
+<div class="landing-page">
+    <div class="landing-hero">
+        <div class="landing-icon">
+            <i class="fas fa-volleyball"></i>
+        </div>
+        <h1>{{ team_info.name }}</h1>
+        <p class="landing-team-code">{{ team_info.code }} | {{ team_info.division }} Division</p>
+        <p class="landing-subtitle">Stay organized with tournament schedules, travel logistics, weather forecasts, and booking statuses - all in one place for the whole team.</p>
+        <a href="{{ url_for('replit_auth.login') }}" class="btn btn-primary btn-large">
+            <i class="fas fa-sign-in-alt"></i> Sign In to View Schedule
+        </a>
+    </div>
+    <div class="landing-features">
+        <div class="feature-card">
+            <i class="fas fa-calendar-days"></i>
+            <h3>Tournament Schedule</h3>
+            <p>View upcoming, past, and cancelled tournaments with full details</p>
+        </div>
+        <div class="feature-card">
+            <i class="fas fa-cloud-sun"></i>
+            <h3>Weather Forecasts</h3>
+            <p>Check weather conditions for upcoming tournament locations</p>
+        </div>
+        <div class="feature-card">
+            <i class="fas fa-car"></i>
+            <h3>Travel Info</h3>
+            <p>Distance, drive time, and directions from home base</p>
+        </div>
+        <div class="feature-card">
+            <i class="fas fa-trophy"></i>
+            <h3>Power League Standings</h3>
+            <p>Track team rank, points, and division placement</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

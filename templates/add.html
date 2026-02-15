@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Add Tournament{% endblock %}
+
+{% block content %}
+<div class="form-page">
+    <a href="{{ url_for('index') }}" class="back-link">Back to Schedule</a>
+    <h1>Add Tournament</h1>
+
+    <form method="POST" class="tournament-form">
+        <div class="form-group">
+            <label for="event">Event Name</label>
+            <input type="text" id="event" name="event" required>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="date">Start Date</label>
+                <input type="date" id="date" name="date" required>
+            </div>
+            <div class="form-group">
+                <label for="dates_display">Date Range Display (e.g. "Feb 14-16, 2026")</label>
+                <input type="text" id="dates_display" name="dates_display" placeholder="Leave blank to auto-fill from start date">
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="days">Day(s)</label>
+            <input type="text" id="days" name="days" placeholder="e.g. Sat-Sun (2 days)">
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="city">City</label>
+                <input type="text" id="city" name="city" required>
+            </div>
+            <div class="form-group">
+                <label for="venue">Venue</label>
+                <input type="text" id="venue" name="venue" required>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="hotel_recommendation">Hotel Recommendation</label>
+                <input type="text" id="hotel_recommendation" name="hotel_recommendation">
+            </div>
+            <div class="form-group">
+                <label for="hotel_link_notes">Hotel Link / Notes</label>
+                <input type="text" id="hotel_link_notes" name="hotel_link_notes">
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="car_rental_recommendation">Car Rental Recommendation</label>
+            <input type="text" id="car_rental_recommendation" name="car_rental_recommendation">
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="hotel_booking_status">Hotel Booking Status</label>
+                <select id="hotel_booking_status" name="hotel_booking_status">
+                    <option value="">-- Select --</option>
+                    <option value="Pending">Pending</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Booked">Booked</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Required">Required</option>
+                    <option value="Not needed">Not needed</option>
+                    <option value="No">No</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="car_booking_status">Car Booking Status</label>
+                <select id="car_booking_status" name="car_booking_status">
+                    <option value="">-- Select --</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Recommended">Recommended</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Required">Required</option>
+                    <option value="Not needed">Not needed</option>
+                    <option value="Maybe">Maybe</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="notes">Notes / Status</label>
+            <textarea id="notes" name="notes" rows="3"></textarea>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Add Tournament</button>
+            <a href="{{ url_for('index') }}" class="btn">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

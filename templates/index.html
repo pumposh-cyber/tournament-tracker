@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Tournament Schedule{% endblock %}
+
+{% block content %}
+<div class="team-banner">
+    <div class="team-banner-left">
+        <div class="team-icon"><i class="fas fa-volleyball"></i></div>
+        <div class="team-details">
+            <h2>{{ team_info.name }}</h2>
+            <div class="team-meta">
+                <span class="team-tag"><i class="fas fa-hashtag"></i> {{ team_info.code }}</span>
+                <span class="team-tag team-tag-division"><i class="fas fa-layer-group"></i> {{ team_info.division }} Division</span>
+            </div>
+        </div>
+    </div>
+    <div class="team-stats">
+        <div class="team-stat">
+            <span class="stat-value">#{{ team_info.rank }}</span>
+            <span class="stat-label">Rank</span>
+        </div>
+        <div class="team-stat">
+            <span class="stat-value">{{ team_info.points }}</span>
+            <span class="stat-label">Points</span>
+        </div>
+        <div class="team-stat-links">
+            <a href="{{ team_info.power_league_url }}" target="_blank" rel="noopener" class="team-link"><i class="fas fa-table"></i> PL Standings</a>
+            <a href="{{ team_info.ncva_points_url }}" target="_blank" rel="noopener" class="team-link"><i class="fas fa-trophy"></i> All Points</a>
+        </div>
+    </div>
+</div>
+
+<div class="header-section">
+    <h1>Tournament Schedule</h1>
+    <div class="filters">
+        <a href="{{ url_for('index', filter='all') }}" class="btn {% if filter_type == 'all' %}btn-active{% endif %}">All</a>
+        <a href="{{ url_for('index', filter='upcoming') }}" class="btn {% if filter_type == 'upcoming' %}btn-active{% endif %}">Current & Upcoming</a>
+        <a href="{{ url_for('index', filter='past') }}" class="btn {% if filter_type == 'past' %}btn-active{% endif %}">Past</a>
+        <a href="{{ url_for('index', filter='cancelled') }}" class="btn {% if filter_type == 'cancelled' %}btn-active btn-cancelled-filter{% endif %}">Cancelled</a>
+    </div>
+</div>
+
+{% if tournaments %}
+<div class="table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <th>Status</th>
+                <th>Event</th>
+                <th>Dates</th>
+                <th>Day(s)</th>
+                <th>City</th>
+                <th>Venue</th>
+                <th>Hotel Status</th>
+                <th>Car Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in tournaments %}
+            <tr class="{% if t.is_cancelled %}row-cancelled{% elif t.date_start < now %}row-past{% else %}row-upcoming{% endif %}">
+                <td>
+                    {% if t.is_cancelled %}
+                        <span class="badge badge-cancelled">Cancelled</span>
+                    {% elif t.date_start < now %}
+                        <span class="badge badge-past">Past</span>
+                    {% else %}
+                        <span class="badge badge-upcoming">Upcoming</span>
+                    {% endif %}
+                </td>
+                <td><a href="{{ url_for('tournament_detail', tournament_id=t.id) }}" class="{% if t.is_cancelled %}cancelled-text{% endif %}">{{ t.event }}</a></td>
+                <td>{{ t.dates_display }}</td>
+                <td>{{ t.days }}</td>
+                <td>{{ t.city }}</td>
+                <td>{{ t.venue }}</td>
+                <td>
+                    {% if t.hotel_booking_status %}
+                        <span class="status-tag status-{{ t.hotel_booking_status|lower|replace(' ', '-') }}">{{ t.hotel_booking_status }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if t.car_booking_status %}
+                        <span class="status-tag status-{{ t.car_booking_status|lower|replace(' ', '-') }}">{{ t.car_booking_status }}</span>
+                    {% endif %}
+                </td>
+                <td class="action-cell">
+                    <a href="{{ url_for('tournament_detail', tournament_id=t.id) }}" class="btn btn-small">View</a>
+                    {% if not t.is_cancelled and t.date_start >= now %}
+                    <a href="{{ url_for('tournament_checklist', tournament_id=t.id) }}" class="btn btn-small btn-checklist" title="Travel Checklist"><i class="fas fa-clipboard-check"></i></a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <h2>No tournaments found</h2>
+    <p>{% if filter_type == 'upcoming' %}No current or upcoming tournaments scheduled.{% elif filter_type == 'past' %}No past tournaments recorded.{% elif filter_type == 'cancelled' %}No cancelled tournaments.{% else %}Add your first tournament to get started.{% endif %}</p>
+    <a href="{{ url_for('add_tournament') }}" class="btn btn-primary">+ Add Tournament</a>
+</div>
+{% endif %}
+{% endblock %}

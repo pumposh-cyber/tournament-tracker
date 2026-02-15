@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Checklist - {{ tournament.event }}{% endblock %}
+
+{% block content %}
+<div class="checklist-page">
+    <a href="{{ url_for('tournament_detail', tournament_id=tournament.id) }}" class="back-link"><i class="fas fa-arrow-left"></i> Back to {{ tournament.event }}</a>
+
+    <div class="checklist-header">
+        <div>
+            <h1><i class="fas fa-clipboard-check"></i> Travel Checklist</h1>
+            <p class="checklist-subtitle">{{ tournament.event }} &mdash; {{ tournament.dates_display }} &mdash; {{ tournament.city }}</p>
+        </div>
+        <div class="checklist-progress">
+            <div class="progress-ring">
+                <span class="progress-number">{{ checked }}/{{ total }}</span>
+                <span class="progress-label">packed</span>
+            </div>
+            <div class="progress-bar-wrap">
+                <div class="progress-bar" style="width: {{ (checked / total * 100) if total > 0 else 0 }}%"></div>
+            </div>
+            <span class="progress-pct">{{ ((checked / total * 100) | round | int) if total > 0 else 0 }}% ready</span>
+        </div>
+    </div>
+
+    {% for category, items in categories.items() %}
+    {% set cat_checked = items | selectattr('is_checked') | list | length %}
+    <div class="checklist-category {% if cat_checked == items | length %}category-complete{% endif %}">
+        <div class="category-header">
+            <div class="category-title">
+                <i class="fas {{ category_icons.get(category, 'fa-list-check') }}"></i>
+                <h2>{{ category }}</h2>
+            </div>
+            <span class="category-count">{{ cat_checked }}/{{ items | length }}</span>
+        </div>
+        <div class="checklist-items">
+            {% for item in items %}
+            <form action="{{ url_for('toggle_checklist_item', tournament_id=tournament.id, item_id=item.id) }}" method="POST" class="checklist-item {% if item.is_checked %}item-checked{% endif %}">
+                <button type="submit" class="check-btn">
+                    {% if item.is_checked %}
+                    <i class="fas fa-square-check"></i>
+                    {% else %}
+                    <i class="far fa-square"></i>
+                    {% endif %}
+                </button>
+                <span class="item-text">{{ item.item_text }}</span>
+            </form>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+
+    <div class="checklist-actions">
+        <form action="{{ url_for('reset_checklist', tournament_id=tournament.id) }}" method="POST" onsubmit="return confirm('Uncheck all items and start fresh?');">
+            <button type="submit" class="btn"><i class="fas fa-rotate-left"></i> Reset Checklist</button>
+        </form>
+        <a href="{{ url_for('tournament_detail', tournament_id=tournament.id) }}" class="btn btn-primary"><i class="fas fa-arrow-left"></i> Back to Details</a>
+    </div>
+</div>
+{% endblock %}
