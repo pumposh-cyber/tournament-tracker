@@ -1,0 +1,13 @@
+flask>=3.1.2
+flask-dance>=7.1.0
+flask-login>=0.6.3
+flask-session>=0.8.0
+flask-sqlalchemy>=3.1.1
+gunicorn>=25.1.0
+oauthlib>=3.3.1
+openpyxl>=3.1.5
+psycopg2-binary>=2.9.11
+pyjwt>=2.11.0
+requests>=2.32.5
+sqlalchemy>=2.0.46
+werkzeug>=3.1.5

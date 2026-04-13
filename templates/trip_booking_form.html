@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Trip Booking – {{ tournament.event }}{% endblock %}
+{% block content %}
+<div class="detail-page">
+  <a href="{{ url_for('trip_dashboard', tournament_id=tournament.id) }}" class="back-link"><i class="fas fa-arrow-left"></i> Back to Trip Dashboard</a>
+  <h1><i class="fas fa-pencil"></i> Trip Booking Details</h1>
+  <p style="color:var(--color-muted);margin-bottom:1.5rem;">{{ tournament.event }} &middot; {{ tournament.dates_display }}</p>
+
+  <form action="{{ url_for('trip_booking', tournament_id=tournament.id) }}" method="POST">
+    <div class="form-section">
+      <h2><i class="fas fa-hotel"></i> Hotel</h2>
+      <div class="form-grid">
+        <div class="form-group"><label>Hotel name</label><input type="text" name="hotel_name" value="{{ booking.hotel_name if booking else '' }}" placeholder="Extended Stay America Suites"></div>
+        <div class="form-group"><label>Address</label><input type="text" name="hotel_address" value="{{ booking.hotel_address if booking else '' }}" placeholder="9795 Gateway Drive, Reno, NV 89521"></div>
+        <div class="form-group"><label>Phone</label><input type="text" name="hotel_phone" value="{{ booking.hotel_phone if booking else '' }}" placeholder="775-852-5611"></div>
+        <div class="form-group"><label>Check-in</label><input type="text" name="hotel_checkin" value="{{ booking.hotel_checkin if booking else '' }}" placeholder="Thu Apr 16 · 3:00 PM"></div>
+        <div class="form-group"><label>Check-out</label><input type="text" name="hotel_checkout" value="{{ booking.hotel_checkout if booking else '' }}" placeholder="Sun Apr 19 · 11:00 AM"></div>
+        <div class="form-group"><label>Confirmation #</label><input type="text" name="hotel_conf" value="{{ booking.hotel_conf if booking else '' }}" placeholder="5601396408"></div>
+        <div class="form-group"><label>PIN / Keycode</label><input type="text" name="hotel_pin" value="{{ booking.hotel_pin if booking else '' }}" placeholder="4389"></div>
+        <div class="form-group"><label>Priceline / booking # (optional)</label><input type="text" name="hotel_priceline" value="{{ booking.hotel_priceline if booking else '' }}" placeholder="267-464-443-96"></div>
+        <div class="form-group form-full"><label>Perks (comma-separated)</label><input type="text" name="hotel_perks" value="{{ booking.hotel_perks if booking else '' }}" placeholder="Breakfast included, Free parking, Free WiFi"></div>
+        <div class="form-group form-full"><label>Cancellation deadline</label><input type="text" name="hotel_cancel_deadline" value="{{ booking.hotel_cancel_deadline if booking else '' }}" placeholder="Fully refundable before Thu Apr 16 at 5:59 PM · 29% penalty after"></div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h2><i class="fas fa-car"></i> Rental Car</h2>
+      <div class="form-grid">
+        <div class="form-group"><label>Rental company</label><input type="text" name="car_company" value="{{ booking.car_company if booking else '' }}" placeholder="Alamo"></div>
+        <div class="form-group"><label>Vehicle type</label><input type="text" name="car_type" value="{{ booking.car_type if booking else '' }}" placeholder="Full-size SUV AWD/4×4"></div>
+        <div class="form-group form-full"><label>Possible models</label><input type="text" name="car_models" value="{{ booking.car_models if booking else '' }}" placeholder="Chevy Tahoe / Ford Expedition / Nissan Armada"></div>
+        <div class="form-group"><label>Pick-up</label><input type="text" name="car_pickup" value="{{ booking.car_pickup if booking else '' }}" placeholder="Thu Apr 16 · 12:00 PM"></div>
+        <div class="form-group"><label>Drop-off</label><input type="text" name="car_dropoff" value="{{ booking.car_dropoff if booking else '' }}" placeholder="Mon Apr 20 · 12:00 PM"></div>
+        <div class="form-group form-full"><label>Pick-up location</label><input type="text" name="car_location" value="{{ booking.car_location if booking else '' }}" placeholder="SJC – 1659 Airport Blvd, Ste 5 · Hours: 6AM–11PM"></div>
+        <div class="form-group"><label>Total price</label><input type="text" name="car_total" value="{{ booking.car_total if booking else '' }}" placeholder="$420.31"></div>
+        <div class="form-group"><label>Confirmation #</label><input type="text" name="car_conf" value="{{ booking.car_conf if booking else '' }}" placeholder="Alamo / Costco conf #"></div>
+        <div class="form-group form-full"><label>Perks (comma-separated)</label><input type="text" name="car_perks" value="{{ booking.car_perks if booking else '' }}" placeholder="Unlimited mileage, Additional driver included, AWD/4×4, Reserve now pay later"></div>
+        <div class="form-group form-full"><label>Notes</label><textarea name="car_notes" rows="2" placeholder="Bring Costco membership card at pickup">{{ booking.car_notes if booking else '' }}</textarea></div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h2><i class="fas fa-whistle"></i> Venue &amp; Coach Tips</h2>
+      <div class="form-grid">
+        <div class="form-group form-full"><label>Weather / road alert</label><input type="text" name="weather_alert" value="{{ booking.weather_alert if booking else '' }}" placeholder="Check Donner Summit / I-80 night before. 4×4 recommended if snow forecast."></div>
+        <div class="form-group form-full"><label>Parking tips</label><textarea name="parking_tips" rows="3" placeholder="AM wave: arrive before 6:45 AM for closest spots. PM = Lot C (916 spaces, Gates 5 & 6) but long walk.">{{ booking.parking_tips if booking else '' }}</textarea></div>
+        <div class="form-group form-full"><label>Food notes</label><textarea name="food_notes" rows="2" placeholder="Food court (Section B): pizza, burgers, hotdogs, chicken tenders. Or pack lunch.">{{ booking.food_notes if booking else '' }}</textarea></div>
+        <div class="form-group form-full"><label>Coach notes</label><textarea name="coach_notes" rows="4" placeholder="Any notes from coach about the tournament, venue logistics, team camp, etc.">{{ booking.coach_notes if booking else '' }}</textarea></div>
+      </div>
+    </div>
+
+    <div class="detail-actions">
+      <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Trip Details</button>
+      <a href="{{ url_for('trip_dashboard', tournament_id=tournament.id) }}" class="btn">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

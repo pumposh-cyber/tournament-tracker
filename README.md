@@ -1,112 +1,79 @@
-# Tournament Tracker
+# 🏐 UVAC Urban Volleyball 15 TS – Tournament Tracker
 
-## Overview
-A Python Flask web application for tracking the UVAC Urban Volleyball 15 TS (G15UVBAC1NC) tournament schedule. Uses PostgreSQL via SQLAlchemy for data storage, with Excel (.xlsx) and CSV import capability. Includes team standings, weather forecasts, distance/drive time from home, NCVA Power League links, travel checklists, and multi-parent login via Replit Auth.
+A Flask-based tournament planning app for Tiya Raina (#13, Middle Blocker) and the UVAC Urban Volleyball 15 TS team (G15UVBAC1NC · Hyacinth Division).
 
-## Team Info
-- **Team**: UVAC Urban Volleyball 15 TS
-- **Code**: G15UVBAC1NC
-- **Age Group**: 15s
-- **Division**: Hyacinth
-- **Rank**: 127 | **Points**: 163
-- **Power League Standings**: [Google Sheets](https://docs.google.com/spreadsheets/d/1_Xog0a8Lqf6COYTfp0B8575teSsfQoy5/edit?gid=486749021#gid=486749021)
-- **NCVA Points Page**: [ncva.com/girls-power-league-points](https://ncva.com/girls-power-league-points/)
-- Team info is stored as TEAM_INFO dict in routes.py and injected into all templates via context_processor
+## Features
 
-## Recent Changes
-- 2026-02-15: Added travel checklist feature with 5 categories (gear, nutrition, recovery, travel, family logistics)
-- 2026-02-15: Changed default schedule view to show upcoming events instead of all
-- 2026-02-15: Added ChecklistItem model with per-tournament tracking, toggle, and reset
-- 2026-02-15: Added team identity (UVAC Urban Volleyball 15 TS) with rank, points, division, Power League links
-- 2026-02-15: Added team banner on schedule page showing rank #127, 163 points, Hyacinth division
-- 2026-02-15: Added Power League standings links to nav, detail page resources, and footer
-- 2026-02-15: Added multi-parent login with Replit Auth (Google, GitHub, Apple, email/password)
-- 2026-02-15: Migrated from SQLite to PostgreSQL database
-- 2026-02-15: Added landing page for logged-out users, protected all routes with login
-- 2026-02-15: Restructured app into app.py (config), routes.py (routes), replit_auth.py (auth), models.py (models)
-- 2026-02-15: Added tournament cancellation feature with reason presets and restore capability
-- 2026-02-15: Added weather forecasts (Open-Meteo API), distance from home, drive time, NCVA links, and resource links
-- 2026-02-15: Initial project creation with Flask, SQLAlchemy
+- **Tournament schedule** — all events with status (upcoming / past / cancelled)
+- **Trip Dashboard** — per-tournament hotel + car booking details, timeline, parking guide, coach notes, weather forecast, venue quick reference, confirmation numbers
+- **Booking form** — save hotel/car confirmation numbers, perks, cancellation deadlines
+- **Live weather** — Open-Meteo API integration with 16-day forecast
+- **Drive time + distance** — calculated from Bay Area home base
+- **Packing checklist** — per-tournament with 5 categories, check/reset
+- **Power League** — rank (#127) and points (163) in header
+- **Replit Auth** — Google OAuth via Replit (swap for Flask-Login if self-hosting)
 
-## Project Architecture
-- **app.py** - Flask app initialization, database config (PostgreSQL), SQLAlchemy setup
-- **main.py** - Entry point, imports routes and starts server on port 5000
-- **routes.py** - All route handlers + TEAM_INFO config + DEFAULT_CHECKLIST data + context_processor
-- **replit_auth.py** - Replit Auth integration (OAuth2, login/logout, session management)
-- **models.py** - SQLAlchemy models: User (auth), OAuth (tokens), Tournament (schedule data), ChecklistItem (travel checklists)
-- **utils.py** - Utility functions: weather API, geocoding, distance calculation, drive time
-- **import_csv.py** - Script to import tournament data from Excel (.xlsx) or CSV files
-- **attached_assets/** - User-uploaded files (original Excel spreadsheet, team screenshots)
-- **templates/** - Jinja2 HTML templates (base, landing, index, detail, add, edit, checklist, 403)
-- **static/style.css** - Stylesheet with team banner, auth UI, landing page, status tags, weather cards, checklist styles
+## Quick Start (local dev)
 
-## Database Schema (PostgreSQL)
-### Users table (Replit Auth - do not drop)
-- id (string, primary key), email, first_name, last_name, profile_image_url
-- created_at, updated_at
+```bash
+git clone https://github.com/pumposh-cyber/tournament-tracker.git
+cd tournament-tracker
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env   # fill in SESSION_SECRET and DATABASE_URL
+python main.py
+```
 
-### OAuth table (Replit Auth - do not drop)
-- user_id, browser_session_key, provider, token
+## Deploy to Railway (recommended — free tier available)
 
-### Tournament table
-- event, dates_display, date_start (datetime for sorting/filtering)
-- days, city, venue
-- hotel_recommendation, hotel_link_notes, car_rental_recommendation
-- hotel_booking_status, car_booking_status, notes
-- is_cancelled (boolean), cancellation_reason (text)
+1. Push to GitHub: `git push origin main`
+2. Go to [railway.app](https://railway.app) → New Project → Deploy from GitHub
+3. Select `tournament-tracker` repo
+4. Add a **PostgreSQL** plugin → Railway auto-sets `DATABASE_URL`
+5. Set env var: `SESSION_SECRET=<random string>`
+6. Set `REPLIT_DOMAINS=your-app.up.railway.app` if using Replit auth
+7. Deploy → your app is live in ~2 minutes
 
-### ChecklistItem table
-- id, tournament_id (FK to tournaments), category, item_text
-- is_checked (boolean), sort_order (integer)
-- Auto-populated with DEFAULT_CHECKLIST items on first access per tournament
+## Deploy to Render (alternative)
 
-## Key Features
-- **Default to upcoming events** - Schedule page shows current/upcoming tournaments by default
-- **Travel checklist** - Per-tournament packing/travel checklist with 5 categories:
-  1. Essential Volleyball Gear (jerseys, shoes, knee pads, etc.)
-  2. Hydration and Nutrition (water, snacks, cooler)
-  3. Recovery and Injury Prevention (foam roller, first aid, ice packs)
-  4. Travel and Comfort Items (bag, charger, schedule, cash)
-  5. Parent / Family Logistics (directions, hotel confirm, sibling snacks)
-- Checklist has progress tracking (X/Y packed), per-category completion indicators
-- Checklist items toggle with one click, reset option to start fresh
-- Team identity banner with rank, points, division, and Power League quick links
-- Multi-parent login via Replit Auth (Google, GitHub, Apple, email/password)
-- Landing page showing team name and code for logged-out users
-- User avatar and name displayed in navigation bar
-- Tournament cancellation with reason (NCVA schedule change, venue change, weather, etc.)
-- Cancel/restore tournaments with one click; cancelled events shown with strikethrough
-- Filter tournaments by All / Upcoming / Past / Cancelled
-- Color-coded booking status tags (Completed, Booked, In Progress, Pending, etc.)
-- Weather forecast for upcoming events (Open-Meteo free API, no key needed)
-- Distance from home and estimated drive time (home: Bay Area, CA)
-- Google Maps directions link
-- NCVA and Power League links in navigation, detail page, and footer
-- WhatsApp Parents Group link in navigation
-- Venue map link on detail page
-- Add, edit, delete tournaments via web forms with dropdown status selectors
-- Excel and CSV import with flexible date parsing
-- Responsive design with Font Awesome icons
+1. Push to GitHub
+2. Go to [render.com](https://render.com) → New Web Service → connect repo
+3. Render reads `render.yaml` automatically — creates app + PostgreSQL
+4. Set `SESSION_SECRET` in environment variables
+5. Deploy
+
+## Environment Variables
+
+| Variable | Required | Notes |
+|---|---|---|
+| `SESSION_SECRET` | Yes | Random secret string |
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `REPLIT_DOMAINS` | If using Replit auth | Your deployed domain |
+| `ISSUER_URL` | If using Replit auth | `https://replit.com` |
+
+## Key Routes
+
+| Route | Description |
+|---|---|
+| `/` | Tournament schedule list |
+| `/tournament/<id>` | Tournament detail |
+| `/trip/<id>` | **Trip Dashboard** (new) |
+| `/trip/<id>/booking` | Add/edit hotel + car details |
+| `/checklist/<id>` | Packing checklist |
+| `/add` | Add new tournament |
 
 ## Tech Stack
-- Python 3.11, Flask, Flask-SQLAlchemy, PostgreSQL
-- Flask-Dance (OAuth2), Flask-Login (session management), PyJWT (token decoding)
-- openpyxl (Excel import), requests (API calls)
-- Open-Meteo API (free, no API key) for weather
-- Font Awesome 6.5 for icons
 
-## Configuration
-- Team info stored in TEAM_INFO dict in routes.py (name, code, division, rank, points, URLs)
-- Default checklist items stored in DEFAULT_CHECKLIST dict in routes.py
-- Home location set in utils.py: Bay Area, CA (37.5585, -122.2711)
-- City coordinates cache in utils.py for common tournament cities
-- SESSION_SECRET environment variable required for secure sessions
-- DATABASE_URL environment variable for PostgreSQL connection
+- **Backend**: Python 3.11 · Flask · SQLAlchemy · PostgreSQL
+- **Auth**: Replit OAuth (flask-dance)
+- **Weather**: Open-Meteo API (free, no key needed)
+- **Frontend**: Jinja2 templates · Font Awesome · vanilla CSS
+- **Deploy**: Railway / Render / Replit
 
-## User Preferences
-- Team: UVAC Urban Volleyball 15 TS (G15UVBAC1NC), Hyacinth Division
-- Tracks volleyball tournaments (NCVA events, Power League)
-- Data includes hotel/car booking logistics
-- Home base: Bay Area, CA
-- Multiple parents need login access to view shared team schedule
-- Wants travel checklists for tournament preparation
+## Current Tournament Data
+
+| Event | Dates | Hotel | Car |
+|---|---|---|---|
+| NCVA Far Western | Apr 17–19, 2026 | Extended Stay America (Reno South Meadows) | Alamo AWD/4×4 Tahoe |
+| NCVA Regional | May 9–10, 2026 | TBA | TBA |
+| NCVA Regional Champs | May 9–10, 2026 | TBA | TBA |
