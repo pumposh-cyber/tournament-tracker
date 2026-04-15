@@ -70,6 +70,24 @@
     </div>
   </div>
 
+  {# ── EMPTY RESULT ── #}
+  {% if extracted is not none and extracted|length == 0 %}
+  <div class="ia-card ia-empty-result">
+    <div class="ia-empty-icon"><i class="fas fa-magnifying-glass"></i></div>
+    <h2>No tournament announcements found</h2>
+    <p>Gemini scanned your chat but didn't find any messages from the <strong>last 7 days</strong> that are directly related to the upcoming tournament.</p>
+    <p>This usually means:</p>
+    <ul>
+      <li>All recent messages are about practice, absences, or general team chat</li>
+      <li>The tournament announcements are older than 7 days</li>
+      <li>The file didn't contain the right group chat</li>
+    </ul>
+    <a href="{{ url_for('import_announcements', tournament_id=tournament.id) }}" class="btn btn-primary" style="margin-top:1rem">
+      <i class="fas fa-rotate-left"></i> Try Again
+    </a>
+  </div>
+  {% endif %}
+
   {# ── REVIEW EXTRACTED ── #}
   {% if extracted %}
   <div class="ia-card">
@@ -262,6 +280,12 @@
 .ia-icon-btn { background: none; border: none; cursor: pointer; color: var(--text-faint); font-size: 0.95rem; padding: 0.3rem; border-radius: 4px; transition: color 0.15s; }
 .ia-icon-btn:hover { color: #d97706; }
 .ia-icon-btn-del:hover { color: var(--danger); }
+.ia-empty-result { text-align: center; padding: 2rem 1.5rem; }
+.ia-empty-icon { font-size: 2.5rem; color: var(--text-faint); margin-bottom: 1rem; }
+.ia-empty-result h2 { font-size: 1.1rem; color: var(--text); margin-bottom: 0.75rem; }
+.ia-empty-result p { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem; line-height: 1.5; }
+.ia-empty-result ul { text-align: left; display: inline-block; font-size: 0.88rem; color: var(--text-muted); line-height: 1.8; padding-left: 1.25rem; }
+
 .flash { padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem; }
 .flash-success { background: var(--success-bg); color: var(--success); }
 .flash-error { background: var(--danger-bg); color: var(--danger-text); }
