@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Version C — Game Day Command Center</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; background:#f0f2f5; color:#1a1a2e; min-height:100vh; }
+nav { background:#1a1a2e; padding:1rem 2rem; }
+.nav-container { max-width:1200px; margin:0 auto; display:flex; justify-content:space-between; align-items:center; }
+.nav-brand { color:#fff; font-size:1.4rem; font-weight:700; text-decoration:none; }
+.nav-right { display:flex; align-items:center; gap:1rem; color:rgba(255,255,255,0.8); font-size:0.9rem; }
+.container { max-width:1200px; margin:0 auto; padding:2rem; }
+.version-tag { background:#d97706; color:#fff; padding:0.4rem 1rem; border-radius:20px; font-size:0.85rem; font-weight:700; display:inline-block; margin-bottom:1.5rem; }
+
+/* CMD Layout */
+.cmd-page { max-width:900px; }
+.cmd-back { color:#2563eb; text-decoration:none; font-size:0.9rem; display:inline-block; margin-bottom:1rem; }
+
+/* Mode banner — the signature feature */
+.cmd-mode-banner { display:flex; align-items:center; gap:0.75rem; padding:0.7rem 1.2rem; border-radius:10px; margin-bottom:1rem; font-weight:700; font-size:0.88rem; text-transform:uppercase; letter-spacing:0.5px; }
+.cmd-mode-gameday { background:linear-gradient(135deg,#fef3c7,#fde68a); border:2px solid #f59e0b; color:#92400e; animation:cmd-pulse 2s ease-in-out infinite; }
+@keyframes cmd-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,0.3)} 50%{box-shadow:0 0 0 8px rgba(245,158,11,0)} }
+.cmd-mode-planning { background:#eff6ff; border:2px solid #93c5fd; color:#1e40af; }
+.cmd-mode-recap { background:#f3f4f6; border:2px solid #d1d5db; color:#6b7280; }
+
+/* Header */
+.cmd-header { display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem; flex-wrap:wrap; }
+.cmd-header h1 { font-size:1.8rem; font-weight:800; }
+.cmd-badge { display:inline-block; padding:0.25rem 0.75rem; border-radius:12px; font-size:0.75rem; font-weight:700; text-transform:uppercase; }
+.cmd-badge-upcoming { background:#dcfce7; color:#166534; }
+.cmd-badge-live { background:#fef3c7; color:#92400e; animation:cmd-live-pulse 1.5s ease-in-out infinite; }
+@keyframes cmd-live-pulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
+.cmd-badge-done { background:#dbeafe; color:#1e40af; }
+
+/* Travel bar */
+.cmd-travel-bar { display:flex; flex-wrap:wrap; gap:1.2rem; background:linear-gradient(135deg,#1e3a5f,#2563eb); color:#fff; padding:1rem 1.5rem; border-radius:10px; margin-bottom:1rem; align-items:center; }
+.cmd-travel-item { display:flex; align-items:center; gap:0.5rem; font-size:0.95rem; }
+.cmd-travel-item i { opacity:0.85; }
+.cmd-map-link { color:#93c5fd; text-decoration:none; font-weight:500; }
+
+/* Countdown */
+.cmd-countdown { display:flex; align-items:center; gap:0.75rem; padding:0.85rem 1.2rem; border-radius:10px; margin-bottom:1rem; font-size:0.95rem; }
+.cmd-countdown-gameday { background:linear-gradient(135deg,#fef3c7,#fed7aa); border:1px solid #f59e0b; color:#92400e; }
+.cmd-countdown-planning { background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; }
+
+<!-- Conf numbers at top — promoted in gameday mode -->
+.cmd-conf-top { background:#fff; border:2px solid #f59e0b; border-radius:10px; padding:1rem 1.2rem; margin-bottom:1.25rem; }
+.cmd-conf-top h3 { font-size:0.8rem; text-transform:uppercase; color:#92400e; margin-bottom:0.6rem; letter-spacing:0.5px; display:flex; align-items:center; gap:0.4rem; }
+.cmd-conf-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:0.5rem; }
+.cmd-conf-item { display:flex; flex-direction:column; gap:0.15rem; }
+.cmd-conf-key { font-size:0.72rem; text-transform:uppercase; color:#888; letter-spacing:0.3px; }
+.cmd-conf-val { font-family:ui-monospace,monospace; font-size:0.9rem; font-weight:700; color:#1a1a2e; }
+
+/* Timeline with NOW badge */
+.cmd-timeline { background:#fff; padding:1.2rem; border-radius:10px; box-shadow:0 1px 4px rgba(0,0,0,0.08); margin-bottom:1.25rem; }
+.cmd-timeline h3 { font-size:0.8rem; text-transform:uppercase; color:#888; margin-bottom:0.75rem; letter-spacing:0.5px; }
+.cmd-tl-row { display:flex; gap:0; overflow-x:auto; }
+.cmd-tl-item { flex:1; min-width:90px; text-align:center; padding:0.5rem 0.25rem; position:relative; }
+.cmd-tl-item:not(:last-child)::after { content:''; position:absolute; top:1.1rem; right:-1px; width:100%; height:2px; background:#e5e7eb; z-index:0; }
+.cmd-tl-icon { width:2.2rem; height:2.2rem; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 0.4rem; font-size:0.85rem; position:relative; z-index:1; }
+.cmd-tl-travel .cmd-tl-icon { background:#dbeafe; color:#1d4ed8; }
+.cmd-tl-game .cmd-tl-icon { background:#dcfce7; color:#16a34a; }
+.cmd-tl-return .cmd-tl-icon { background:#f3f4f6; color:#6b7280; }
+.cmd-tl-active .cmd-tl-icon { background:#fef3c7; color:#d97706; box-shadow:0 0 0 3px rgba(245,158,11,0.3); }
+.cmd-tl-date { font-size:0.75rem; font-weight:600; color:#374151; margin-bottom:0.15rem; }
+.cmd-tl-label { font-size:0.7rem; color:#6b7280; }
+.cmd-now-badge { display:inline-block; background:#f59e0b; color:#fff; font-size:0.6rem; font-weight:800; padding:0.1rem 0.4rem; border-radius:8px; text-transform:uppercase; letter-spacing:0.5px; margin-top:0.2rem; }
+
+/* Card base */
+.cmd-card { background:#fff; padding:1.25rem; border-radius:10px; box-shadow:0 1px 4px rgba(0,0,0,0.08); margin-bottom:1.25rem; }
+.cmd-card h3 { font-size:0.8rem; text-transform:uppercase; color:#888; margin-bottom:0.5rem; letter-spacing:0.5px; }
+
+/* Weather */
+.cmd-weather-grid { display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:0.75rem; }
+.cmd-weather-day { flex:1; min-width:85px; text-align:center; background:#f8faff; border-radius:8px; padding:0.65rem 0.4rem; border:1px solid #e5e7eb; }
+.cmd-weather-day-active { border:2px solid #f59e0b; background:#fffbeb; }
+.cmd-weather-date { font-size:0.7rem; color:#6b7280; margin-bottom:0.25rem; }
+.cmd-weather-icon { font-size:1.3rem; color:#2563eb; display:block; margin:0.2rem 0; }
+.cmd-weather-desc { font-size:0.7rem; color:#555; margin-bottom:0.2rem; }
+.cmd-weather-temps { display:flex; justify-content:center; gap:0.4rem; font-size:0.8rem; font-weight:600; }
+.cmd-weather-precip { font-size:0.7rem; color:#6b7280; margin-top:0.15rem; }
+.cmd-weather-links { display:flex; gap:1rem; flex-wrap:wrap; margin-top:0.5rem; }
+.cmd-weather-links a { color:#2563eb; text-decoration:none; font-weight:500; font-size:0.88rem; display:flex; align-items:center; gap:0.35rem; }
+.cmd-temp-hi { color:#dc2626; }
+.cmd-temp-lo { color:#2563eb; }
+
+/* Booking pair */
+.cmd-booking-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.25rem; }
+.cmd-booking-card { background:#fff; padding:1.25rem; border-radius:10px; box-shadow:0 1px 4px rgba(0,0,0,0.08); }
+.cmd-booking-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.6rem; }
+.cmd-booking-title { font-size:0.8rem; text-transform:uppercase; color:#888; letter-spacing:0.5px; }
+.cmd-booking-name { font-weight:700; font-size:1rem; color:#1a1a2e; margin-bottom:0.4rem; }
+.cmd-booking-detail { font-size:0.85rem; color:#555; margin-bottom:0.25rem; display:flex; align-items:flex-start; gap:0.4rem; }
+.cmd-booking-row { display:flex; justify-content:space-between; align-items:baseline; font-size:0.85rem; padding:0.25rem 0; border-bottom:1px solid #f3f4f6; }
+.cmd-booking-row:last-of-type { border-bottom:none; }
+.cmd-booking-key { color:#888; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.3px; min-width:70px; }
+.cmd-booking-conf { font-weight:700; font-family:ui-monospace,monospace; font-size:0.85rem; color:#1a1a2e; }
+.cmd-booking-perks { display:flex; flex-wrap:wrap; gap:0.3rem; margin-top:0.5rem; }
+.cmd-perk { background:#dcfce7; color:#166534; font-size:0.72rem; padding:0.15rem 0.5rem; border-radius:10px; font-weight:500; }
+.cmd-booking-cancel { font-size:0.8rem; color:#92400e; background:#fef3c7; padding:0.3rem 0.5rem; border-radius:4px; margin-top:0.4rem; display:inline-block; }
+
+/* Notes */
+.cmd-notes-row { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; margin-bottom:1.25rem; }
+
+/* Links */
+.cmd-links { margin-bottom:1.5rem; }
+.cmd-links h2 { font-size:1.2rem; margin-bottom:1rem; color:#1a1a2e; }
+.cmd-links-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:0.75rem; }
+.cmd-link-card { display:flex; align-items:center; gap:0.75rem; background:#fff; padding:1rem; border-radius:10px; box-shadow:0 1px 4px rgba(0,0,0,0.08); text-decoration:none; color:#333; transition:all 0.2s; border:1px solid transparent; }
+.cmd-link-card:hover { border-color:#d97706; }
+.cmd-link-card i { font-size:1.2rem; color:#d97706; }
+.cmd-link-card span { font-size:0.9rem; font-weight:500; }
+
+/* Checklist / actions */
+.cmd-checklist-row { margin-bottom:1.5rem; display:flex; gap:0.75rem; flex-wrap:wrap; }
+.cmd-checklist-link { display:inline-flex; align-items:center; gap:0.4rem; color:#d97706; text-decoration:none; font-weight:600; font-size:0.95rem; padding:0.6rem 1rem; background:#fffbeb; border-radius:8px; border:1px solid #fde68a; }
+.cmd-actions { display:flex; gap:0.75rem; flex-wrap:wrap; }
+.cmd-btn { display:inline-flex; align-items:center; gap:0.4rem; padding:0.5rem 1rem; border:none; border-radius:6px; text-decoration:none; font-size:0.9rem; cursor:pointer; font-weight:600; }
+.cmd-btn-primary { background:#2563eb; color:#fff; }
+.cmd-btn-danger { background:#dc2626; color:#fff; }
+.cmd-btn-cancel { background:#f97316; color:#fff; }
+
+/* Recap mode — desaturated overlay (shown on Version C recap demo) */
+.cmd-recap-mode .cmd-card,
+.cmd-recap-mode .cmd-booking-card,
+.cmd-recap-mode .cmd-timeline { filter:saturate(0.4) opacity(0.85); }
+
+footer { text-align:center; padding:1.5rem; color:#999; font-size:0.85rem; }
+@media(max-width:768px) { .cmd-booking-grid{grid-template-columns:1fr;} .cmd-notes-row{grid-template-columns:1fr;} .container{padding:1rem;} }
+</style>
+</head>
+<body>
+<nav><div class="nav-container"><a class="nav-brand"><i class="fas fa-volleyball"></i> Urban 15U Tracker</a><div class="nav-right"><span>Pumposh</span></div></div></nav>
+<main class="container">
+<div class="version-tag">VERSION C — Game Day Command Center</div>
+<div class="cmd-page">
+  <a class="cmd-back"><i class="fas fa-arrow-left"></i> Back to Schedule</a>
+
+  <!-- MODE BANNER — the signature element -->
+  <div class="cmd-mode-banner cmd-mode-gameday">
+    <i class="fas fa-bolt"></i>
+    <span>Game Day Mode — Day 2 of 3</span>
+    <span style="margin-left:auto;font-size:0.75rem;opacity:0.8;text-transform:none;font-weight:400">Auto-detected from tournament dates</span>
+  </div>
+
+  <!-- HEADER -->
+  <div class="cmd-header">
+    <h1>NCVA Far Western</h1>
+    <span class="cmd-badge cmd-badge-live"><i class="fas fa-circle" style="font-size:0.5rem;vertical-align:middle"></i> LIVE</span>
+  </div>
+
+  <!-- TRAVEL BAR -->
+  <div class="cmd-travel-bar">
+    <div class="cmd-travel-item"><i class="fas fa-calendar-days"></i><span>Apr 17-19, 2026</span></div>
+    <div class="cmd-travel-item"><i class="fas fa-clock"></i><span>3 days</span></div>
+    <div class="cmd-travel-item"><i class="fas fa-road"></i><span>218 miles from Bay Area, CA</span></div>
+    <div class="cmd-travel-item"><i class="fas fa-car"></i><span>4.0 hr drive</span></div>
+    <div class="cmd-travel-item"><a class="cmd-map-link"><i class="fas fa-map-location-dot"></i> Get Directions</a></div>
+  </div>
+
+  <!-- COUNTDOWN — gameday variant -->
+  <div class="cmd-countdown cmd-countdown-gameday">
+    <i class="fas fa-volleyball"></i>
+    <strong>Day 2 in progress!</strong>
+    <span>Saturday, April 18 — Check-out tomorrow 11:00 AM</span>
+  </div>
+
+  <!-- CONF NUMBERS — promoted to top in game day mode -->
+  <div class="cmd-conf-top">
+    <h3><i class="fas fa-star"></i> Quick Reference — Tap to Copy</h3>
+    <div class="cmd-conf-grid">
+      <div class="cmd-conf-item"><span class="cmd-conf-key">Hotel conf #</span><span class="cmd-conf-val">5601396408 · PIN 4389</span></div>
+      <div class="cmd-conf-item"><span class="cmd-conf-key">Priceline #</span><span class="cmd-conf-val">267-464-443-96</span></div>
+      <div class="cmd-conf-item"><span class="cmd-conf-key">Car rental conf #</span><span class="cmd-conf-val">ALM-99284756</span></div>
+      <div class="cmd-conf-item"><span class="cmd-conf-key">Hotel phone</span><span class="cmd-conf-val">775-852-5611</span></div>
+    </div>
+  </div>
+
+  <!-- TIMELINE — with NOW badge on current day -->
+  <div class="cmd-timeline">
+    <h3><i class="fas fa-calendar-days"></i> Trip Timeline</h3>
+    <div class="cmd-tl-row">
+      <div class="cmd-tl-item cmd-tl-travel"><div class="cmd-tl-icon"><i class="fas fa-car"></i></div><div class="cmd-tl-date">Thu, Apr 16</div><div class="cmd-tl-label">Travel Day</div></div>
+      <div class="cmd-tl-item cmd-tl-game"><div class="cmd-tl-icon"><i class="fas fa-volleyball"></i></div><div class="cmd-tl-date">Fri, Apr 17</div><div class="cmd-tl-label">Day 1</div></div>
+      <div class="cmd-tl-item cmd-tl-active"><div class="cmd-tl-icon"><i class="fas fa-volleyball"></i></div><div class="cmd-tl-date">Sat, Apr 18</div><div class="cmd-tl-label">Day 2</div><div class="cmd-now-badge">NOW</div></div>
+      <div class="cmd-tl-item cmd-tl-game"><div class="cmd-tl-icon"><i class="fas fa-volleyball"></i></div><div class="cmd-tl-date">Sun, Apr 19</div><div class="cmd-tl-label">Day 3</div></div>
+      <div class="cmd-tl-item cmd-tl-return"><div class="cmd-tl-icon"><i class="fas fa-house"></i></div><div class="cmd-tl-date">Mon, Apr 20</div><div class="cmd-tl-label">Return</div></div>
+    </div>
+  </div>
+
+  <!-- WEATHER — today highlighted -->
+  <div class="cmd-card">
+    <h3><i class="fas fa-cloud-sun"></i> Weather Forecast</h3>
+    <div class="cmd-weather-grid">
+      <div class="cmd-weather-day"><div class="cmd-weather-date">Apr 17</div><i class="fas fa-sun cmd-weather-icon" style="color:#f59e0b"></i><div class="cmd-weather-desc">Clear sky</div><div class="cmd-weather-temps"><span class="cmd-temp-hi">72°</span><span class="cmd-temp-lo">45°</span></div><div class="cmd-weather-precip"><i class="fas fa-droplet"></i> 5%</div></div>
+      <div class="cmd-weather-day cmd-weather-day-active"><div class="cmd-weather-date">Apr 18 — TODAY</div><i class="fas fa-cloud-sun cmd-weather-icon"></i><div class="cmd-weather-desc">Partly cloudy</div><div class="cmd-weather-temps"><span class="cmd-temp-hi">68°</span><span class="cmd-temp-lo">42°</span></div><div class="cmd-weather-precip"><i class="fas fa-droplet"></i> 15%</div></div>
+      <div class="cmd-weather-day"><div class="cmd-weather-date">Apr 19</div><i class="fas fa-cloud-sun cmd-weather-icon"></i><div class="cmd-weather-desc">Mainly clear</div><div class="cmd-weather-temps"><span class="cmd-temp-hi">70°</span><span class="cmd-temp-lo">44°</span></div><div class="cmd-weather-precip"><i class="fas fa-droplet"></i> 10%</div></div>
+    </div>
+    <div class="cmd-weather-links">
+      <a><i class="fas fa-temperature-half"></i> AccuWeather forecast</a>
+      <a><i class="fas fa-road"></i> CalTrans Road Conditions</a>
+    </div>
+  </div>
+
+  <!-- HOTEL + CAR -->
+  <div class="cmd-booking-grid">
+    <div class="cmd-booking-card">
+      <div class="cmd-booking-header"><span class="cmd-booking-title"><i class="fas fa-hotel"></i> Hotel</span></div>
+      <div class="cmd-booking-name">Extended Stay America Suites</div>
+      <div class="cmd-booking-detail"><i class="fas fa-location-dot"></i> 9795 Gateway Drive, Reno, NV 89521</div>
+      <div class="cmd-booking-detail"><i class="fas fa-phone"></i> 775-852-5611</div>
+      <div class="cmd-booking-row"><span class="cmd-booking-key">Check-in</span><span>Thu Apr 16 · 3:00 PM</span></div>
+      <div class="cmd-booking-row"><span class="cmd-booking-key">Check-out</span><span>Sun Apr 19 · 11:00 AM</span></div>
+      <div class="cmd-booking-row"><span class="cmd-booking-key">Conf #</span><span class="cmd-booking-conf">5601396408 · PIN: 4389</span></div>
+      <div class="cmd-booking-row"><span class="cmd-booking-key">Priceline #</span><span class="cmd-booking-conf">267-464-443-96</span></div>
+      <div class="cmd-booking-perks">
+        <span class="cmd-perk"><i class="fas fa-check"></i> Breakfast</span>
+        <span class="cmd-perk"><i class="fas fa-check"></i> Free parking</span>
+        <span class="cmd-perk"><i class="fas fa-check"></i> WiFi</span>
+      </div>
+      <div class="cmd-booking-cancel"><i class="fas fa-clock"></i> Cancel by: Thu Apr 16 at 5:59 PM</div>
+    </div>
+    <div class="cmd-booking-card">
+      <div class="cmd-booking-header"><span class="cmd-booking-title"><i class="fas fa-car"></i> Rental Car</span></div>
+      <div class="cmd-booking-name">Alamo – Full-size SUV AWD/4×4</div>
+      <div class="cmd-booking-detail"><i class="fas fa-car-side"></i> Chevy Tahoe / Ford Expedition</div>
+      <div class="cmd-booking-detail"><i class="fas fa-location-dot"></i> SJC – 1659 Airport Blvd</div>
+      <div class="cmd-booking-row"><span class="cmd-booking-key">Pick-up</span><span>Thu Apr 16 · 12:00 PM</span></div>
+      <div class="cmd-booking-row"><span class="cmd-booking-key">Drop-off</span><span>Mon Apr 20 · 12:00 PM</span></div>
+      <div class="cmd-booking-row"><span class="cmd-booking-key">Total</span><span class="cmd-booking-conf">$420.31</span></div>
+      <div class="cmd-booking-row"><span class="cmd-booking-key">Conf #</span><span class="cmd-booking-conf">ALM-99284756</span></div>
+      <div class="cmd-booking-perks">
+        <span class="cmd-perk"><i class="fas fa-check"></i> Unlimited mileage</span>
+        <span class="cmd-perk"><i class="fas fa-check"></i> AWD/4×4</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTES -->
+  <div class="cmd-notes-row">
+    <div class="cmd-card"><h3><i class="fas fa-whistle"></i> Coach Notes</h3><p style="font-size:0.92rem;color:#333;line-height:1.6">Skip heavy camp setup — RSCC has tables & chairs inside. Report time 7:00 AM for AM wave.</p></div>
+    <div class="cmd-card"><h3><i class="fas fa-square-parking"></i> Parking Tips</h3><p style="font-size:0.92rem;color:#333;line-height:1.6">Lot C (916 spaces, Gates 5 & 6) is largest. Arrive before 6:45 AM for AM wave.</p></div>
+    <div class="cmd-card"><h3><i class="fas fa-utensils"></i> Food Notes</h3><p style="font-size:0.92rem;color:#333;line-height:1.6">Food court in Section B: pizza, burgers, chicken tenders. Pack lunch for Day 1.</p></div>
+  </div>
+
+  <!-- LINKS -->
+  <div class="cmd-links">
+    <h2><i class="fas fa-link"></i> Useful Links</h2>
+    <div class="cmd-links-grid">
+      <a class="cmd-link-card"><i class="fas fa-volleyball"></i><span>NCVA Events</span></a>
+      <a class="cmd-link-card"><i class="fas fa-table"></i><span>PL Standings</span></a>
+      <a class="cmd-link-card"><i class="fas fa-trophy"></i><span>All Points</span></a>
+      <a class="cmd-link-card"><i class="fas fa-ranking-star"></i><span>AES Bracket</span></a>
+      <a class="cmd-link-card"><i class="fas fa-map"></i><span>Venue Map</span></a>
+      <a class="cmd-link-card" style="color:#25d366"><i class="fab fa-whatsapp" style="color:#25d366"></i><span>Parents WhatsApp</span></a>
+    </div>
+  </div>
+
+  <!-- ACTIONS -->
+  <div class="cmd-checklist-row">
+    <a class="cmd-checklist-link"><i class="fas fa-clipboard-check"></i> Travel Checklist</a>
+    <a class="cmd-checklist-link"><i class="fas fa-pencil"></i> Edit Booking Details</a>
+  </div>
+  <div class="cmd-actions">
+    <a class="cmd-btn cmd-btn-primary"><i class="fas fa-pen-to-square"></i> Edit Tournament</a>
+    <button class="cmd-btn cmd-btn-cancel"><i class="fas fa-ban"></i> Cancel Tournament</button>
+    <button class="cmd-btn cmd-btn-danger"><i class="fas fa-trash"></i> Delete</button>
+  </div>
+</div>
+</main>
+<footer>UVAC Urban Volleyball 15 TS | Version C Preview</footer>
+</body>
+</html>

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Version B — Premium Parent Dashboard</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; background:#f0f2f5; color:#1a1a2e; min-height:100vh; }
+nav { background:#1a1a2e; padding:1rem 2rem; }
+.nav-container { max-width:1200px; margin:0 auto; display:flex; justify-content:space-between; align-items:center; }
+.nav-brand { color:#fff; font-size:1.4rem; font-weight:700; text-decoration:none; }
+.nav-right { display:flex; align-items:center; gap:1rem; color:rgba(255,255,255,0.8); font-size:0.9rem; }
+.container { max-width:1200px; margin:0 auto; padding:2rem; }
+.version-tag { background:#7c3aed; color:#fff; padding:0.4rem 1rem; border-radius:20px; font-size:0.85rem; font-weight:700; display:inline-block; margin-bottom:1.5rem; }
+
+/* PDB Layout — wider than A */
+.pdb-page { max-width:1100px; }
+.pdb-back { color:#2563eb; text-decoration:none; font-size:0.9rem; display:inline-block; margin-bottom:1rem; }
+
+/* Header with status strip */
+.pdb-header { display:flex; align-items:center; gap:1rem; margin-bottom:0.75rem; flex-wrap:wrap; }
+.pdb-header h1 { font-size:1.8rem; font-weight:800; }
+.pdb-badge { display:inline-block; padding:0.25rem 0.75rem; border-radius:20px; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; }
+.pdb-badge-upcoming { background:linear-gradient(135deg,#dcfce7,#bbf7d0); color:#166534; }
+.pdb-status-strip { display:flex; gap:0.5rem; margin-bottom:1.5rem; flex-wrap:wrap; }
+.pdb-status-pill { display:inline-flex; align-items:center; gap:0.35rem; padding:0.3rem 0.75rem; border-radius:20px; font-size:0.78rem; font-weight:600; }
+.pdb-pill-booked { background:#dcfce7; color:#166534; }
+.pdb-pill-pending { background:#fef3c7; color:#92400e; }
+
+/* Travel bar — gradient */
+.pdb-travel-bar { display:flex; flex-wrap:wrap; gap:1.2rem; background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 50%,#7c3aed 100%); color:#fff; padding:1rem 1.5rem; border-radius:12px; margin-bottom:1rem; align-items:center; }
+.pdb-travel-item { display:flex; align-items:center; gap:0.5rem; font-size:0.95rem; }
+.pdb-travel-item i { opacity:0.85; }
+.pdb-map-link { color:#c4b5fd; text-decoration:none; font-weight:500; }
+
+/* Countdown — gradient pill */
+.pdb-countdown { display:flex; align-items:center; gap:0.75rem; padding:0.85rem 1.2rem; border-radius:12px; margin-bottom:1.5rem; font-size:0.95rem; background:linear-gradient(135deg,#ede9fe,#dbeafe); border:1px solid #c4b5fd; color:#5b21b6; }
+.pdb-countdown i { font-size:1.1rem; }
+.pdb-countdown strong { font-size:1.05rem; }
+
+/* Timeline — richer styling */
+.pdb-timeline { background:#fff; padding:1.5rem; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:1.25rem; }
+.pdb-timeline h3 { font-size:0.8rem; text-transform:uppercase; color:#888; margin-bottom:1rem; letter-spacing:0.5px; }
+.pdb-tl-row { display:flex; gap:0; overflow-x:auto; }
+.pdb-tl-item { flex:1; min-width:100px; text-align:center; padding:0.6rem 0.3rem; position:relative; }
+.pdb-tl-item:not(:last-child)::after { content:''; position:absolute; top:1.25rem; right:-1px; width:100%; height:3px; background:linear-gradient(90deg,#e5e7eb,#e5e7eb); z-index:0; }
+.pdb-tl-icon { width:2.5rem; height:2.5rem; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 0.5rem; font-size:0.95rem; position:relative; z-index:1; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
+.pdb-tl-travel .pdb-tl-icon { background:linear-gradient(135deg,#dbeafe,#bfdbfe); color:#1d4ed8; }
+.pdb-tl-game .pdb-tl-icon { background:linear-gradient(135deg,#dcfce7,#bbf7d0); color:#16a34a; }
+.pdb-tl-return .pdb-tl-icon { background:linear-gradient(135deg,#f3f4f6,#e5e7eb); color:#6b7280; }
+.pdb-tl-date { font-size:0.78rem; font-weight:700; color:#374151; margin-bottom:0.15rem; }
+.pdb-tl-label { font-size:0.72rem; color:#6b7280; }
+
+/* Weather compact */
+.pdb-card { background:#fff; padding:1.5rem; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:1.25rem; }
+.pdb-card h3 { font-size:0.8rem; text-transform:uppercase; color:#888; margin-bottom:0.75rem; letter-spacing:0.5px; }
+.pdb-weather-grid { display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:0.75rem; }
+.pdb-weather-day { flex:1; min-width:90px; text-align:center; background:#f8faff; border-radius:10px; padding:0.75rem 0.5rem; border:1px solid #e5e7eb; transition:all 0.2s; }
+.pdb-weather-day:hover { border-color:#7c3aed; box-shadow:0 2px 8px rgba(124,58,237,0.12); }
+.pdb-weather-date { font-size:0.7rem; color:#6b7280; margin-bottom:0.3rem; }
+.pdb-weather-icon { font-size:1.4rem; color:#2563eb; display:block; margin:0.3rem 0; }
+.pdb-weather-desc { font-size:0.7rem; color:#555; margin-bottom:0.25rem; }
+.pdb-weather-temps { display:flex; justify-content:center; gap:0.5rem; font-size:0.82rem; font-weight:700; }
+.pdb-weather-precip { font-size:0.7rem; color:#6b7280; margin-top:0.2rem; }
+.pdb-weather-links { display:flex; gap:1rem; flex-wrap:wrap; margin-top:0.5rem; }
+.pdb-weather-links a { color:#7c3aed; text-decoration:none; font-weight:500; font-size:0.88rem; display:flex; align-items:center; gap:0.35rem; }
+.pdb-temp-hi { color:#dc2626; }
+.pdb-temp-lo { color:#2563eb; }
+
+/* Booking pair — wider with status pills */
+.pdb-booking-grid { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; margin-bottom:1.25rem; }
+.pdb-booking-card { background:#fff; padding:1.5rem; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.06); border-top:3px solid #2563eb; }
+.pdb-booking-card-car { border-top-color:#7c3aed; }
+.pdb-booking-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.75rem; }
+.pdb-booking-title { font-size:0.8rem; text-transform:uppercase; color:#888; letter-spacing:0.5px; display:flex; align-items:center; gap:0.4rem; }
+.pdb-booking-status { display:inline-flex; align-items:center; gap:0.3rem; padding:0.2rem 0.6rem; border-radius:12px; font-size:0.72rem; font-weight:700; text-transform:uppercase; }
+.pdb-status-booked { background:#dcfce7; color:#166534; }
+.pdb-booking-name { font-weight:700; font-size:1.05rem; color:#1a1a2e; margin-bottom:0.5rem; }
+.pdb-booking-detail { font-size:0.85rem; color:#555; margin-bottom:0.3rem; display:flex; align-items:flex-start; gap:0.4rem; }
+.pdb-booking-detail a { color:#2563eb; text-decoration:none; }
+.pdb-booking-row { display:flex; justify-content:space-between; align-items:baseline; font-size:0.85rem; padding:0.3rem 0; border-bottom:1px solid #f3f4f6; }
+.pdb-booking-row:last-of-type { border-bottom:none; }
+.pdb-booking-key { color:#888; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.3px; min-width:75px; }
+.pdb-booking-conf { font-weight:700; font-family:ui-monospace,monospace; font-size:0.85rem; color:#1a1a2e; }
+.pdb-booking-perks { display:flex; flex-wrap:wrap; gap:0.35rem; margin-top:0.6rem; }
+.pdb-perk { background:#f0fdf4; color:#166534; font-size:0.72rem; padding:0.2rem 0.55rem; border-radius:10px; font-weight:500; border:1px solid #bbf7d0; }
+.pdb-booking-cancel { font-size:0.8rem; color:#92400e; background:#fef3c7; padding:0.35rem 0.6rem; border-radius:6px; margin-top:0.5rem; display:inline-block; }
+
+/* Conf summary — gradient accent */
+.pdb-conf-box { background:linear-gradient(135deg,#fafbff,#f0f4ff); border:1px solid #dbeafe; }
+.pdb-conf-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:0.6rem; }
+.pdb-conf-item { display:flex; flex-direction:column; gap:0.15rem; padding:0.4rem 0; }
+.pdb-conf-key { font-size:0.72rem; text-transform:uppercase; color:#888; letter-spacing:0.3px; }
+.pdb-conf-val { font-family:ui-monospace,monospace; font-size:0.92rem; font-weight:700; color:#1a1a2e; }
+
+/* Notes cards */
+.pdb-notes-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; margin-bottom:1.25rem; }
+.pdb-note-card { background:#fff; padding:1.25rem; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+.pdb-note-card h3 { font-size:0.8rem; text-transform:uppercase; color:#888; margin-bottom:0.5rem; letter-spacing:0.5px; }
+.pdb-note-card p { font-size:0.92rem; color:#333; line-height:1.6; }
+
+/* Links */
+.pdb-links h2 { font-size:1.2rem; margin-bottom:1rem; color:#1a1a2e; }
+.pdb-links-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:0.75rem; }
+.pdb-link-card { display:flex; align-items:center; gap:0.75rem; background:#fff; padding:1rem; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.06); text-decoration:none; color:#333; transition:all 0.2s; border:2px solid transparent; }
+.pdb-link-card:hover { border-color:#7c3aed; transform:translateY(-2px); box-shadow:0 4px 12px rgba(124,58,237,0.15); }
+.pdb-link-card i { font-size:1.2rem; color:#7c3aed; }
+.pdb-link-card span { font-size:0.9rem; font-weight:500; }
+
+/* Checklist / actions */
+.pdb-checklist-row { margin-bottom:1.5rem; display:flex; gap:0.75rem; flex-wrap:wrap; }
+.pdb-checklist-link { display:inline-flex; align-items:center; gap:0.5rem; color:#7c3aed; text-decoration:none; font-weight:600; font-size:0.95rem; padding:0.65rem 1.2rem; background:linear-gradient(135deg,#ede9fe,#dbeafe); border-radius:10px; border:1px solid #c4b5fd; transition:all 0.2s; }
+.pdb-checklist-link:hover { transform:translateY(-1px); box-shadow:0 2px 8px rgba(124,58,237,0.2); }
+.pdb-actions { display:flex; gap:0.75rem; flex-wrap:wrap; }
+.pdb-btn { display:inline-flex; align-items:center; gap:0.4rem; padding:0.55rem 1.1rem; border:none; border-radius:8px; text-decoration:none; font-size:0.9rem; cursor:pointer; font-weight:600; transition:all 0.2s; }
+.pdb-btn-primary { background:#2563eb; color:#fff; }
+.pdb-btn-primary:hover { background:#1d4ed8; }
+.pdb-btn-danger { background:#dc2626; color:#fff; }
+.pdb-btn-cancel { background:#f97316; color:#fff; }
+
+footer { text-align:center; padding:1.5rem; color:#999; font-size:0.85rem; }
+@media(max-width:900px) { .pdb-booking-grid{grid-template-columns:1fr;} .pdb-notes-grid{grid-template-columns:1fr;} }
+@media(max-width:600px) { .container{padding:1rem;} .pdb-tl-item{min-width:75px;} }
+</style>
+</head>
+<body>
+<nav><div class="nav-container"><a class="nav-brand"><i class="fas fa-volleyball"></i> Urban 15U Tracker</a><div class="nav-right"><span>Pumposh</span></div></div></nav>
+<main class="container">
+<div class="version-tag">VERSION B — Premium Parent Dashboard</div>
+<div class="pdb-page">
+  <a class="pdb-back"><i class="fas fa-arrow-left"></i> Back to Schedule</a>
+
+  <!-- 1. HEADER + STATUS STRIP -->
+  <div class="pdb-header">
+    <h1>NCVA Far Western</h1>
+    <span class="pdb-badge pdb-badge-upcoming">Upcoming</span>
+  </div>
+  <div class="pdb-status-strip">
+    <span class="pdb-status-pill pdb-pill-booked"><i class="fas fa-circle-check"></i> Hotel Booked</span>
+    <span class="pdb-status-pill pdb-pill-booked"><i class="fas fa-circle-check"></i> Car Booked</span>
+    <span class="pdb-status-pill pdb-pill-pending"><i class="fas fa-clock"></i> Checklist In Progress</span>
+  </div>
+
+  <!-- 2. TRAVEL BAR -->
+  <div class="pdb-travel-bar">
+    <div class="pdb-travel-item"><i class="fas fa-calendar-days"></i><span>Apr 17-19, 2026</span></div>
+    <div class="pdb-travel-item"><i class="fas fa-clock"></i><span>3 days</span></div>
+    <div class="pdb-travel-item"><i class="fas fa-road"></i><span>218 miles from Bay Area, CA</span></div>
+    <div class="pdb-travel-item"><i class="fas fa-car"></i><span>4.0 hr drive</span></div>
+    <div class="pdb-travel-item"><a class="pdb-map-link"><i class="fas fa-map-location-dot"></i> Get Directions</a></div>
+  </div>
+
+  <!-- 3. COUNTDOWN -->
+  <div class="pdb-countdown">
+    <i class="fas fa-hourglass-half"></i>
+    <strong>4 days away!</strong>
+    <span>Tournament starts Friday, April 17</span>
+  </div>
+
+  <!-- 4. TIMELINE -->
+  <div class="pdb-timeline">
+    <h3><i class="fas fa-calendar-days"></i> Trip Timeline</h3>
+    <div class="pdb-tl-row">
+      <div class="pdb-tl-item pdb-tl-travel"><div class="pdb-tl-icon"><i class="fas fa-car"></i></div><div class="pdb-tl-date">Thu, Apr 16</div><div class="pdb-tl-label">Travel Day</div></div>
+      <div class="pdb-tl-item pdb-tl-game"><div class="pdb-tl-icon"><i class="fas fa-volleyball"></i></div><div class="pdb-tl-date">Fri, Apr 17</div><div class="pdb-tl-label">Day 1</div></div>
+      <div class="pdb-tl-item pdb-tl-game"><div class="pdb-tl-icon"><i class="fas fa-volleyball"></i></div><div class="pdb-tl-date">Sat, Apr 18</div><div class="pdb-tl-label">Day 2</div></div>
+      <div class="pdb-tl-item pdb-tl-game"><div class="pdb-tl-icon"><i class="fas fa-volleyball"></i></div><div class="pdb-tl-date">Sun, Apr 19</div><div class="pdb-tl-label">Day 3</div></div>
+      <div class="pdb-tl-item pdb-tl-return"><div class="pdb-tl-icon"><i class="fas fa-house"></i></div><div class="pdb-tl-date">Mon, Apr 20</div><div class="pdb-tl-label">Return Home</div></div>
+    </div>
+  </div>
+
+  <!-- 5. WEATHER -->
+  <div class="pdb-card">
+    <h3><i class="fas fa-cloud-sun"></i> Weather Forecast</h3>
+    <div class="pdb-weather-grid">
+      <div class="pdb-weather-day"><div class="pdb-weather-date">Apr 17</div><i class="fas fa-sun pdb-weather-icon" style="color:#f59e0b"></i><div class="pdb-weather-desc">Clear sky</div><div class="pdb-weather-temps"><span class="pdb-temp-hi">72°</span><span class="pdb-temp-lo">45°</span></div><div class="pdb-weather-precip"><i class="fas fa-droplet"></i> 5%</div></div>
+      <div class="pdb-weather-day"><div class="pdb-weather-date">Apr 18</div><i class="fas fa-cloud-sun pdb-weather-icon"></i><div class="pdb-weather-desc">Partly cloudy</div><div class="pdb-weather-temps"><span class="pdb-temp-hi">68°</span><span class="pdb-temp-lo">42°</span></div><div class="pdb-weather-precip"><i class="fas fa-droplet"></i> 15%</div></div>
+      <div class="pdb-weather-day"><div class="pdb-weather-date">Apr 19</div><i class="fas fa-cloud-sun pdb-weather-icon"></i><div class="pdb-weather-desc">Mainly clear</div><div class="pdb-weather-temps"><span class="pdb-temp-hi">70°</span><span class="pdb-temp-lo">44°</span></div><div class="pdb-weather-precip"><i class="fas fa-droplet"></i> 10%</div></div>
+    </div>
+    <div class="pdb-weather-links">
+      <a><i class="fas fa-temperature-half"></i> AccuWeather forecast</a>
+      <a><i class="fas fa-road"></i> CalTrans Road Conditions</a>
+    </div>
+  </div>
+
+  <!-- 6. HOTEL + CAR BOOKING CARDS -->
+  <div class="pdb-booking-grid">
+    <div class="pdb-booking-card">
+      <div class="pdb-booking-header">
+        <span class="pdb-booking-title"><i class="fas fa-hotel"></i> Hotel</span>
+        <span class="pdb-booking-status pdb-status-booked"><i class="fas fa-circle-check"></i> Booked</span>
+      </div>
+      <div class="pdb-booking-name">Extended Stay America Suites</div>
+      <div class="pdb-booking-detail"><i class="fas fa-location-dot"></i> 9795 Gateway Drive, Reno, NV 89521</div>
+      <div class="pdb-booking-detail"><i class="fas fa-phone"></i> <a href="tel:+17758525611">775-852-5611</a></div>
+      <div class="pdb-booking-row"><span class="pdb-booking-key">Check-in</span><span>Thu Apr 16 · 3:00 PM</span></div>
+      <div class="pdb-booking-row"><span class="pdb-booking-key">Check-out</span><span>Sun Apr 19 · 11:00 AM</span></div>
+      <div class="pdb-booking-row"><span class="pdb-booking-key">Conf #</span><span class="pdb-booking-conf">5601396408 · PIN: 4389</span></div>
+      <div class="pdb-booking-row"><span class="pdb-booking-key">Priceline #</span><span class="pdb-booking-conf">267-464-443-96</span></div>
+      <div class="pdb-booking-perks">
+        <span class="pdb-perk"><i class="fas fa-check"></i> Breakfast</span>
+        <span class="pdb-perk"><i class="fas fa-check"></i> Free parking</span>
+        <span class="pdb-perk"><i class="fas fa-check"></i> WiFi</span>
+        <span class="pdb-perk"><i class="fas fa-check"></i> Kitchen</span>
+      </div>
+      <div class="pdb-booking-cancel"><i class="fas fa-clock"></i> Cancel by: Thu Apr 16 at 5:59 PM · 29% penalty after</div>
+    </div>
+    <div class="pdb-booking-card pdb-booking-card-car">
+      <div class="pdb-booking-header">
+        <span class="pdb-booking-title"><i class="fas fa-car"></i> Rental Car</span>
+        <span class="pdb-booking-status pdb-status-booked"><i class="fas fa-circle-check"></i> Booked</span>
+      </div>
+      <div class="pdb-booking-name">Alamo – Full-size SUV AWD/4×4</div>
+      <div class="pdb-booking-detail"><i class="fas fa-car-side"></i> Chevy Tahoe / Ford Expedition</div>
+      <div class="pdb-booking-detail"><i class="fas fa-location-dot"></i> SJC – 1659 Airport Blvd</div>
+      <div class="pdb-booking-row"><span class="pdb-booking-key">Pick-up</span><span>Thu Apr 16 · 12:00 PM</span></div>
+      <div class="pdb-booking-row"><span class="pdb-booking-key">Drop-off</span><span>Mon Apr 20 · 12:00 PM</span></div>
+      <div class="pdb-booking-row"><span class="pdb-booking-key">Total</span><span class="pdb-booking-conf">$420.31</span></div>
+      <div class="pdb-booking-row"><span class="pdb-booking-key">Conf #</span><span class="pdb-booking-conf">ALM-99284756</span></div>
+      <div class="pdb-booking-perks">
+        <span class="pdb-perk"><i class="fas fa-check"></i> Unlimited mileage</span>
+        <span class="pdb-perk"><i class="fas fa-check"></i> AWD/4×4</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. CONF NUMBERS SUMMARY -->
+  <div class="pdb-card pdb-conf-box">
+    <h3><i class="fas fa-hashtag"></i> Quick Reference — Confirmation Numbers</h3>
+    <div class="pdb-conf-grid">
+      <div class="pdb-conf-item"><span class="pdb-conf-key">Hotel conf #</span><span class="pdb-conf-val">5601396408 · PIN 4389</span></div>
+      <div class="pdb-conf-item"><span class="pdb-conf-key">Priceline #</span><span class="pdb-conf-val">267-464-443-96</span></div>
+      <div class="pdb-conf-item"><span class="pdb-conf-key">Car rental conf #</span><span class="pdb-conf-val">ALM-99284756</span></div>
+      <div class="pdb-conf-item"><span class="pdb-conf-key">Hotel phone</span><span class="pdb-conf-val"><a href="tel:+17758525611" style="color:#1a1a2e;text-decoration:none">775-852-5611</a></span></div>
+    </div>
+  </div>
+
+  <!-- 8. NOTES — 3 column grid -->
+  <div class="pdb-notes-grid">
+    <div class="pdb-note-card">
+      <h3><i class="fas fa-whistle"></i> Coach Notes</h3>
+      <p>Skip heavy camp setup — RSCC has tables & chairs inside. Report time 7:00 AM for AM wave.</p>
+    </div>
+    <div class="pdb-note-card">
+      <h3><i class="fas fa-square-parking"></i> Parking Tips</h3>
+      <p>Lot C (916 spaces, Gates 5 & 6) is largest. Arrive before 6:45 AM for AM wave parking.</p>
+    </div>
+    <div class="pdb-note-card">
+      <h3><i class="fas fa-utensils"></i> Food Notes</h3>
+      <p>Food court in Section B: pizza, burgers, chicken tenders. Pack lunch for Day 1.</p>
+    </div>
+  </div>
+
+  <!-- 9. USEFUL LINKS -->
+  <div class="pdb-links" style="margin-bottom:1.5rem;">
+    <h2><i class="fas fa-link"></i> Useful Links</h2>
+    <div class="pdb-links-grid">
+      <a class="pdb-link-card"><i class="fas fa-volleyball"></i><span>NCVA Events</span></a>
+      <a class="pdb-link-card"><i class="fas fa-table"></i><span>PL Standings</span></a>
+      <a class="pdb-link-card"><i class="fas fa-trophy"></i><span>All Points</span></a>
+      <a class="pdb-link-card"><i class="fas fa-ranking-star"></i><span>AES Bracket</span></a>
+      <a class="pdb-link-card"><i class="fas fa-map"></i><span>Venue Map</span></a>
+      <a class="pdb-link-card" style="color:#25d366"><i class="fab fa-whatsapp" style="color:#25d366"></i><span>Parents WhatsApp</span></a>
+    </div>
+  </div>
+
+  <!-- 10. ACTIONS -->
+  <div class="pdb-checklist-row">
+    <a class="pdb-checklist-link"><i class="fas fa-clipboard-check"></i> Travel Checklist</a>
+    <a class="pdb-checklist-link"><i class="fas fa-pencil"></i> Edit Booking Details</a>
+  </div>
+  <div class="pdb-actions">
+    <a class="pdb-btn pdb-btn-primary"><i class="fas fa-pen-to-square"></i> Edit Tournament</a>
+    <button class="pdb-btn pdb-btn-cancel"><i class="fas fa-ban"></i> Cancel Tournament</button>
+    <button class="pdb-btn pdb-btn-danger"><i class="fas fa-trash"></i> Delete</button>
+  </div>
+</div>
+</main>
+<footer>UVAC Urban Volleyball 15 TS | Version B Preview</footer>
+</body>
+</html>

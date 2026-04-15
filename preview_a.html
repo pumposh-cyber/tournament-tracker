@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Version A — Clean Merge</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; background:#f0f2f5; color:#1a1a2e; min-height:100vh; }
+nav { background:#1a1a2e; padding:1rem 2rem; }
+.nav-container { max-width:1200px; margin:0 auto; display:flex; justify-content:space-between; align-items:center; }
+.nav-brand { color:#fff; font-size:1.4rem; font-weight:700; text-decoration:none; }
+.nav-right { color:rgba(255,255,255,0.8); font-size:0.9rem; }
+.container { max-width:1200px; margin:0 auto; padding:2rem; }
+.version-tag { background:#2563eb; color:#fff; padding:0.4rem 1rem; border-radius:20px; font-size:0.85rem; font-weight:700; display:inline-block; margin-bottom:1.5rem; }
+
+/* ===================================================
+   UPDATES BANNER — full width, pull-down curtain
+=================================================== */
+.updates-banner {
+  background:#1a1a2e;
+  border-radius:10px;
+  margin-bottom:1rem;
+  overflow:hidden;
+  box-shadow:0 2px 8px rgba(0,0,0,0.15);
+}
+.updates-banner-top {
+  display:flex;
+  align-items:center;
+  gap:0.75rem;
+  padding:0.85rem 1.2rem;
+  cursor:default;
+}
+.updates-banner-icon { color:#f59e0b; font-size:1rem; flex-shrink:0; }
+.updates-banner-dot {
+  width:9px; height:9px; border-radius:50%; flex-shrink:0;
+  background:#d97706;
+}
+.updates-banner-text { flex:1; font-size:0.92rem; color:#f1f5f9; font-weight:500; }
+.updates-banner-text strong { color:#fff; }
+.updates-banner-time { font-size:0.75rem; color:#94a3b8; white-space:nowrap; }
+.updates-banner-badge {
+  background:#f59e0b; color:#1a1a2e;
+  font-size:0.72rem; font-weight:800;
+  padding:0.15rem 0.55rem; border-radius:20px;
+  white-space:nowrap;
+}
+/* Pull handle */
+.updates-pull-handle {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:0.5rem;
+  padding:0.45rem 1.2rem;
+  background:#111827;
+  cursor:pointer;
+  font-size:0.75rem;
+  color:#94a3b8;
+  user-select:none;
+  transition:background 0.15s;
+  border-top:1px solid rgba(255,255,255,0.06);
+}
+.updates-pull-handle:hover { background:#0f172a; color:#cbd5e1; }
+.pull-chevron { transition:transform 0.3s; font-size:0.7rem; }
+.pull-chevron.open { transform:rotate(180deg); }
+/* Curtain — the hidden updates */
+.updates-curtain {
+  max-height:0;
+  overflow:hidden;
+  transition:max-height 0.35s ease;
+  background:#111827;
+}
+.updates-curtain.open { max-height:400px; }
+.curtain-item {
+  display:flex;
+  gap:0.65rem;
+  padding:0.7rem 1.2rem;
+  border-top:1px solid rgba(255,255,255,0.06);
+  align-items:flex-start;
+}
+.curtain-dot {
+  width:8px; height:8px; border-radius:50%; margin-top:0.4rem; flex-shrink:0;
+}
+.curtain-dot-green { background:#22c55e; }
+.curtain-dot-blue  { background:#60a5fa; }
+.curtain-body { flex:1; }
+.curtain-text { font-size:0.88rem; color:#e2e8f0; line-height:1.45; }
+.curtain-time { font-size:0.72rem; color:#64748b; margin-top:0.15rem; }
+
+/* ===================================================
+   PRE-TRIP READINESS PANEL — spans full width, top
+=================================================== */
+.trip-readiness {
+  background:#fff;
+  border-radius:12px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.08);
+  margin-bottom:1.5rem;
+  overflow:hidden;
+  border-top:4px solid #2563eb;
+}
+.trip-readiness-header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:1rem 1.5rem;
+  cursor:pointer;
+  user-select:none;
+  background:#fafbff;
+  border-bottom:1px solid #e5e7eb;
+  gap:1rem;
+  flex-wrap:wrap;
+}
+.trip-readiness-title {
+  display:flex;
+  align-items:center;
+  gap:0.6rem;
+  font-size:1rem;
+  font-weight:700;
+  color:#1a1a2e;
+}
+.trip-readiness-title i { color:#2563eb; font-size:1.1rem; }
+.trip-readiness-meta { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
+.readiness-score {
+  font-size:0.85rem;
+  font-weight:700;
+  color:#2563eb;
+}
+.progress-bar-wrap {
+  width:160px;
+  height:8px;
+  background:#e5e7eb;
+  border-radius:4px;
+  overflow:hidden;
+}
+.progress-bar-fill {
+  height:100%;
+  background:linear-gradient(90deg,#2563eb,#16a34a);
+  border-radius:4px;
+  transition:width 0.3s;
+}
+.readiness-toggle {
+  color:#6b7280;
+  font-size:0.85rem;
+  transition:transform 0.2s;
+}
+.readiness-toggle.open { transform:rotate(180deg); }
+
+.trip-readiness-body {
+  padding:1.25rem 1.5rem;
+}
+
+/* Category sections */
+.checklist-categories {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+  gap:1.25rem;
+}
+.checklist-cat { }
+.checklist-cat-title {
+  display:flex;
+  align-items:center;
+  gap:0.4rem;
+  font-size:0.75rem;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+  color:#6b7280;
+  margin-bottom:0.6rem;
+}
+.checklist-cat-title i { font-size:0.85rem; }
+.checklist-items { display:flex; flex-direction:column; gap:0.35rem; }
+.checklist-item {
+  display:flex;
+  align-items:center;
+  gap:0.55rem;
+  font-size:0.88rem;
+  color:#374151;
+  cursor:pointer;
+  padding:0.15rem 0;
+}
+.checklist-item input[type=checkbox] {
+  width:16px;
+  height:16px;
+  accent-color:#2563eb;
+  cursor:pointer;
+  flex-shrink:0;
+}
+.checklist-item.checked span { text-decoration:line-through; color:#9ca3af; }
+.checklist-item .item-tag {
+  margin-left:auto;
+  font-size:0.65rem;
+  font-weight:700;
+  padding:0.1rem 0.4rem;
+  border-radius:8px;
+  text-transform:uppercase;
+  flex-shrink:0;
+}
+.tag-done { background:#dcfce7; color:#166534; }
+.tag-critical { background:#fee2e2; color:#991b1b; }
+.tag-optional { background:#f3f4f6; color:#6b7280; }
+
+/* All-done celebration banner */
+.all-done-banner {
+  display:none;
+  align-items:center;
+  gap:0.75rem;
+  background:linear-gradient(135deg,#dcfce7,#d1fae5);
+  border:1px solid #86efac;
+  border-radius:8px;
+  padding:0.85rem 1.2rem;
+  margin-top:1rem;
+  color:#166534;
+  font-weight:600;
+}
+
+/* ===================================================
+   TWO-COLUMN LAYOUT
+=================================================== */
+.page-layout { display:grid; grid-template-columns:1fr 300px; gap:1.5rem; align-items:start; }
+.main-col { min-width:0; }
+.side-col { position:sticky; top:1.5rem; }
+
+/* Common elements */
+.back-link { color:#2563eb; text-decoration:none; font-size:0.9rem; display:inline-block; margin-bottom:1rem; }
+.detail-header { display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem; flex-wrap:wrap; }
+.detail-header h1 { font-size:1.8rem; }
+.badge { display:inline-block; padding:0.25rem 0.6rem; border-radius:12px; font-size:0.75rem; font-weight:600; text-transform:uppercase; }
+.badge-upcoming { background:#dcfce7; color:#166534; }
+.badge-done { background:#dbeafe; color:#1e40af; }
+
+/* Travel bar */
+.travel-info-bar { background:linear-gradient(135deg,#1e3a5f,#2563eb); color:#fff; padding:1rem 1.5rem; border-radius:10px; margin-bottom:1rem; }
+.travel-row-1 { display:flex; flex-wrap:wrap; gap:1.2rem; align-items:center; margin-bottom:0.75rem; }
+.travel-row-2 { display:flex; flex-wrap:wrap; gap:0; align-items:stretch; background:rgba(0,0,0,0.18); border-radius:8px; overflow:hidden; }
+.travel-item { display:flex; align-items:center; gap:0.5rem; font-size:0.95rem; }
+.travel-item i { opacity:0.8; }
+/* Route display */
+.travel-route { display:flex; align-items:center; gap:0.5rem; flex:1; min-width:0; padding:0.6rem 0.9rem; }
+.travel-route-from, .travel-route-to { font-size:0.82rem; line-height:1.3; min-width:0; }
+.travel-route-from { color:rgba(255,255,255,0.75); }
+.travel-route-from strong, .travel-route-to strong { display:block; color:#fff; font-size:0.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.travel-route-arrow { color:rgba(255,255,255,0.5); font-size:0.85rem; flex-shrink:0; }
+.travel-route-divider { width:1px; background:rgba(255,255,255,0.12); margin:0.4rem 0; }
+/* Nav buttons */
+.nav-btn { display:flex; align-items:center; gap:0.5rem; padding:0.6rem 1rem; text-decoration:none; font-size:0.85rem; font-weight:600; white-space:nowrap; transition:background 0.15s; border-left:1px solid rgba(255,255,255,0.12); }
+.nav-btn:first-child { border-left:none; }
+.nav-btn-gmaps { color:#93c5fd; }
+.nav-btn-gmaps:hover { background:rgba(255,255,255,0.08); }
+.nav-btn-waze { color:#a7f3d0; }
+.nav-btn-waze:hover { background:rgba(255,255,255,0.08); }
+
+/* Countdown */
+.countdown-banner { display:flex; align-items:center; gap:0.75rem; background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; padding:0.85rem 1.2rem; border-radius:10px; margin-bottom:1rem; font-size:0.95rem; }
+.countdown-banner i { color:#2563eb; }
+
+/* Timeline */
+.timeline-section { background:#fff; padding:1.2rem; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,0.08); margin-bottom:1rem; }
+.timeline-section h3 { font-size:0.8rem; text-transform:uppercase; color:#888; margin-bottom:0.75rem; }
+.timeline-row { display:flex; overflow-x:auto; padding-bottom:0.25rem; }
+.timeline-item { flex:1; min-width:80px; text-align:center; padding:0.5rem 0.25rem; position:relative; }
+.timeline-item:not(:last-child)::after { content:''; position:absolute; top:1.1rem; right:-1px; width:100%; height:2px; background:#e5e7eb; z-index:0; }
+.timeline-icon { width:2rem; height:2rem; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 0.4rem; font-size:0.85rem; position:relative; z-index:1; }
+.timeline-blue .timeline-icon { background:#dbeafe; color:#1d4ed8; }
+.timeline-green .timeline-icon { background:#dcfce7; color:#16a34a; }
+.timeline-gray .timeline-icon { background:#f3f4f6; color:#6b7280; }
+.timeline-date { font-size:0.75rem; font-weight:600; color:#374151; margin-bottom:0.15rem; }
+.timeline-label { font-size:0.7rem; color:#6b7280; }
+
+/* Weather */
+.detail-card { background:#fff; padding:1.2rem; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,0.08); margin-bottom:1rem; }
+.detail-card h3 { font-size:0.8rem; text-transform:uppercase; color:#888; margin-bottom:0.5rem; }
+.weather-grid-small { display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:0.75rem; }
+.weather-day { flex:1; min-width:80px; text-align:center; background:#f8faff; border-radius:8px; padding:0.6rem 0.4rem; border:1px solid #e5e7eb; }
+.weather-date-sm { font-size:0.7rem; color:#6b7280; margin-bottom:0.25rem; }
+.weather-icon-sm { font-size:1.3rem; display:block; margin:0.2rem 0; }
+.weather-desc-sm { font-size:0.7rem; color:#555; margin-bottom:0.2rem; }
+.weather-temps-sm { display:flex; justify-content:center; gap:0.4rem; font-size:0.8rem; font-weight:600; }
+.weather-precip-sm { font-size:0.7rem; color:#6b7280; margin-top:0.15rem; }
+.weather-links { display:flex; gap:1rem; flex-wrap:wrap; margin-top:0.5rem; }
+.temp-hi { color:#dc2626; }
+.temp-lo { color:#2563eb; }
+
+/* ===== ROAD TRIP SECTION ===== */
+.roadtrip-card { background:#fff; border-radius:10px; box-shadow:0 1px 4px rgba(0,0,0,0.08); margin-bottom:1rem; overflow:hidden; }
+.roadtrip-tabs { display:flex; border-bottom:1px solid #e5e7eb; }
+.roadtrip-tab {
+  flex:1; padding:0.7rem 0.5rem; text-align:center; cursor:pointer;
+  font-size:0.82rem; font-weight:600; color:#6b7280;
+  border-bottom:2px solid transparent; transition:all 0.15s;
+  user-select:none;
+}
+.roadtrip-tab.active { color:#2563eb; border-bottom-color:#2563eb; background:#fafbff; }
+.roadtrip-tab:hover:not(.active) { background:#f9fafb; color:#374151; }
+.roadtrip-pane { display:none; padding:1rem 1.2rem; }
+.roadtrip-pane.active { display:block; }
+
+/* Stop cards on the road */
+.road-stops { display:flex; flex-direction:column; gap:0.6rem; }
+.road-stop { display:flex; gap:0.75rem; align-items:flex-start; padding:0.6rem 0.75rem; background:#f8faff; border-radius:8px; border-left:3px solid #93c5fd; }
+.road-stop-icon { font-size:1.1rem; flex-shrink:0; margin-top:0.1rem; }
+.road-stop-body { flex:1; }
+.road-stop-name { font-size:0.9rem; font-weight:700; color:#1a1a2e; }
+.road-stop-dist { font-size:0.72rem; color:#6b7280; margin-bottom:0.15rem; }
+.road-stop-desc { font-size:0.82rem; color:#374151; line-height:1.4; }
+
+/* Destination grid */
+.dest-sections { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+.dest-section h4 { font-size:0.75rem; text-transform:uppercase; color:#888; letter-spacing:0.4px; margin-bottom:0.5rem; display:flex; align-items:center; gap:0.35rem; }
+.dest-list { display:flex; flex-direction:column; gap:0.4rem; }
+.dest-item { font-size:0.85rem; color:#374151; display:flex; align-items:flex-start; gap:0.5rem; }
+.dest-item i { color:#2563eb; font-size:0.8rem; margin-top:0.15rem; flex-shrink:0; }
+.dest-item-sub { font-size:0.75rem; color:#6b7280; }
+.fact-pill { background:#eff6ff; color:#1e40af; border-radius:6px; padding:0.35rem 0.6rem; font-size:0.82rem; line-height:1.4; margin-bottom:0.3rem; }
+.store-item { display:flex; align-items:center; gap:0.5rem; font-size:0.85rem; color:#374151; padding:0.25rem 0; }
+.store-item i { font-size:0.9rem; color:#6b7280; flex-shrink:0; }
+.store-badge { font-size:0.7rem; font-weight:700; padding:0.1rem 0.4rem; border-radius:8px; margin-left:auto; }
+.store-badge-costco { background:#005DAA; color:#fff; }
+.store-badge-walmart { background:#0071CE; color:#fff; }
+.store-badge-target { background:#CC0000; color:#fff; }
+.store-badge-sams { background:#0066A6; color:#fff; }
+
+/* Booking pair */
+.booking-pair { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem; }
+.booking-name { font-weight:600; font-size:1rem; color:#1a1a2e; margin-bottom:0.4rem; }
+.booking-detail { font-size:0.85rem; color:#555; margin-bottom:0.25rem; display:flex; align-items:flex-start; gap:0.4rem; }
+.booking-row { display:flex; justify-content:space-between; align-items:baseline; font-size:0.85rem; padding:0.2rem 0; border-bottom:1px solid #f3f4f6; }
+.booking-row:last-of-type { border-bottom:none; }
+.booking-key { color:#888; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.3px; min-width:70px; }
+.booking-conf { font-weight:600; font-family:ui-monospace,monospace; font-size:0.85rem; }
+.booking-perks { display:flex; flex-wrap:wrap; gap:0.3rem; margin-top:0.5rem; }
+.perk-badge { background:#dcfce7; color:#166534; font-size:0.72rem; padding:0.15rem 0.5rem; border-radius:10px; font-weight:500; }
+.booking-cancel { font-size:0.8rem; color:#92400e; background:#fef3c7; padding:0.3rem 0.5rem; border-radius:4px; margin-top:0.4rem; }
+
+/* Conf */
+.conf-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:0.5rem; }
+.conf-item { display:flex; flex-direction:column; gap:0.15rem; }
+.conf-key { font-size:0.72rem; text-transform:uppercase; color:#888; letter-spacing:0.3px; }
+.conf-val { font-family:ui-monospace,monospace; font-size:0.9rem; font-weight:600; color:#1a1a2e; }
+
+/* Notes row */
+.notes-row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem; }
+
+/* Links */
+.resource-links { margin-bottom:1.5rem; }
+.resource-links h2 { font-size:1.2rem; margin-bottom:1rem; color:#1a1a2e; }
+.links-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:0.75rem; }
+.resource-card { display:flex; align-items:center; gap:0.75rem; background:#fff; padding:1rem; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,0.08); text-decoration:none; color:#333; border:1px solid transparent; transition:all 0.2s; }
+.resource-card:hover { border-color:#2563eb; }
+.resource-card i { font-size:1.2rem; color:#2563eb; }
+.resource-card span { font-size:0.9rem; font-weight:500; }
+.resource-card-caltrans i { color:#d97706; }
+.resource-card-caltrans:hover { border-color:#d97706; }
+
+.checklist-link-section { margin-bottom:1.5rem; display:flex; gap:0.75rem; flex-wrap:wrap; }
+.checklist-link { display:inline-flex; align-items:center; gap:0.4rem; color:#2563eb; text-decoration:none; font-weight:500; font-size:0.95rem; padding:0.6rem 1rem; background:#eff6ff; border-radius:8px; border:1px solid #bfdbfe; }
+.detail-actions { display:flex; gap:0.75rem; flex-wrap:wrap; }
+.btn { display:inline-block; padding:0.5rem 1rem; border:1px solid #ddd; border-radius:6px; text-decoration:none; font-size:0.9rem; cursor:pointer; background:#fff; color:#333; }
+.btn-primary { background:#2563eb; color:#fff; border-color:#2563eb; }
+.btn-danger { background:#dc2626; color:#fff; border-color:#dc2626; }
+.btn-cancel { background:#f97316; color:#fff; border-color:#f97316; }
+
+/* ===== SIDEBAR ===== */
+.side-panel { background:#fff; border-radius:10px; box-shadow:0 1px 4px rgba(0,0,0,0.08); overflow:hidden; margin-bottom:1rem; }
+.side-panel-header { display:flex; align-items:center; justify-content:space-between; padding:0.75rem 1rem; border-bottom:1px solid #f3f4f6; }
+.side-panel-header h3 { font-size:0.8rem; text-transform:uppercase; color:#888; letter-spacing:0.4px; display:flex; align-items:center; gap:0.4rem; }
+.side-panel-header .wa-icon { color:#25d366; }
+.side-panel-badge { background:#dcfce7; color:#166534; font-size:0.68rem; font-weight:700; padding:0.15rem 0.45rem; border-radius:10px; }
+.side-panel-badge-blue { background:#dbeafe; color:#1e40af; }
+.pinned-list { padding:0.5rem 0; }
+.pinned-msg { padding:0.65rem 1rem; border-bottom:1px solid #f9fafb; }
+.pinned-msg:last-child { border-bottom:none; }
+.pinned-meta { display:flex; align-items:center; gap:0.4rem; margin-bottom:0.25rem; }
+.pinned-author { font-size:0.75rem; font-weight:700; color:#1a1a2e; }
+.pinned-time { font-size:0.7rem; color:#9ca3af; margin-left:auto; }
+.pinned-pin { font-size:0.65rem; color:#d97706; }
+.pinned-text { font-size:0.82rem; color:#374151; line-height:1.45; }
+.updates-list { padding:0.5rem 0; }
+.update-item { display:flex; gap:0.6rem; padding:0.65rem 1rem; border-bottom:1px solid #f9fafb; align-items:flex-start; }
+.update-item:last-child { border-bottom:none; }
+.update-dot { width:8px; height:8px; border-radius:50%; background:#2563eb; margin-top:0.35rem; flex-shrink:0; }
+.update-dot-green { background:#16a34a; }
+.update-dot-amber { background:#d97706; }
+.update-body { flex:1; }
+.update-text { font-size:0.82rem; color:#374151; line-height:1.45; }
+.update-time { font-size:0.7rem; color:#9ca3af; margin-top:0.15rem; }
+
+footer { text-align:center; padding:1.5rem; color:#999; font-size:0.85rem; }
+
+@media(max-width:900px) {
+  .page-layout { grid-template-columns:1fr; }
+  .side-col { position:static; }
+  .booking-pair { grid-template-columns:1fr; }
+  .notes-row { grid-template-columns:1fr; }
+  .checklist-categories { grid-template-columns:1fr 1fr; }
+}
+@media(max-width:600px) {
+  .container { padding:1rem; }
+  .checklist-categories { grid-template-columns:1fr; }
+  .progress-bar-wrap { width:100px; }
+}
+</style>
+</head>
+<body>
+<nav><div class="nav-container"><a class="nav-brand"><i class="fas fa-volleyball"></i> Urban 15U Tracker</a><div class="nav-right">Pumposh</div></div></nav>
+<main class="container">
+<div class="version-tag">VERSION A — Clean Merge</div>
+
+<a class="back-link"><i class="fas fa-arrow-left"></i> Back to Schedule</a>
+
+<!-- ============================================================
+     UPDATES BANNER — latest update visible, pull down for more
+============================================================ -->
+<div class="updates-banner">
+  <!-- First / latest update always visible -->
+  <div class="updates-banner-top">
+    <i class="fas fa-bell updates-banner-icon"></i>
+    <div class="updates-banner-dot"></div>
+    <span class="updates-banner-text"><strong>I-80 chain controls lifted</strong> — Donner Pass clear as of this morning.</span>
+    <span class="updates-banner-time">Today · 8:12 AM</span>
+    <span class="updates-banner-badge">4 new</span>
+  </div>
+  <!-- Pull handle -->
+  <div class="updates-pull-handle" onclick="toggleCurtain()">
+    <i class="fas fa-chevron-down pull-chevron" id="pull-icon"></i>
+    <span id="pull-label">3 more updates — pull for more</span>
+  </div>
+  <!-- Curtain — hidden by default -->
+  <div class="updates-curtain" id="updates-curtain">
+    <div class="curtain-item">
+      <div class="curtain-dot curtain-dot-green"></div>
+      <div class="curtain-body">
+        <div class="curtain-text">Hotel confirmed — Extended Stay shows reservation as guaranteed.</div>
+        <div class="curtain-time">Apr 13 · 6:45 PM</div>
+      </div>
+    </div>
+    <div class="curtain-item">
+      <div class="curtain-dot curtain-dot-blue"></div>
+      <div class="curtain-body">
+        <div class="curtain-text">Tournament schedule posted on AES — pool play starts 8:30 AM Fri.</div>
+        <div class="curtain-time">Apr 12 · 2:00 PM</div>
+      </div>
+    </div>
+    <div class="curtain-item">
+      <div class="curtain-dot curtain-dot-blue"></div>
+      <div class="curtain-body">
+        <div class="curtain-text">Car rental pick-up confirmed at SJC Terminal A — Alamo counter.</div>
+        <div class="curtain-time">Apr 11 · 10:30 AM</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PRE-TRIP READINESS — full width, collapses after trip starts
+============================================================ -->
+<div class="trip-readiness">
+  <div class="trip-readiness-header" onclick="toggleReadiness()">
+    <div class="trip-readiness-title">
+      <i class="fas fa-clipboard-list"></i>
+      Pre-Trip Readiness — NCVA Far Western
+    </div>
+    <div class="trip-readiness-meta">
+      <span class="readiness-score" id="score-text">0 / 22 complete</span>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+      </div>
+      <i class="fas fa-chevron-down readiness-toggle open" id="toggle-icon"></i>
+    </div>
+  </div>
+
+  <div class="trip-readiness-body" id="readiness-body">
+    <div class="checklist-categories">
+
+      <!-- BOOKINGS -->
+      <div class="checklist-cat">
+        <div class="checklist-cat-title"><i class="fas fa-circle-check" style="color:#16a34a"></i> Bookings</div>
+        <div class="checklist-items">
+          <label class="checklist-item"><input type="checkbox" checked onchange="updateProgress()"><span>Hotel reserved</span><span class="item-tag tag-done">Done</span></label>
+          <label class="checklist-item"><input type="checkbox" checked onchange="updateProgress()"><span>Car rental confirmed</span><span class="item-tag tag-done">Done</span></label>
+          <label class="checklist-item"><input type="checkbox" onchange="updateProgress()"><span>Hotel conf # saved</span><span class="item-tag tag-critical">Critical</span></label>
+          <label class="checklist-item"><input type="checkbox" onchange="updateProgress()"><span>Cancel deadline noted</span><span class="item-tag tag-critical">Critical</span></label>
+          <label class="checklist-item"><input type="checkbox" onchange="updateProgress()"><span>Entry fees paid</span></label>
+        </div>
+      </div>
+
+      <!-- TRAVEL PREP -->
+      <div class="checklist-cat">
+        <div class="checklist-cat-title"><i class="fas fa-car" style="color:#2563eb"></i> Travel Prep</div>
+        <div class="checklist-items">
+          <label class="checklist-item"><input type="checkbox" onchange="updateProgress()"><span>Check I-80 / CalTrans conditions</span><span class="item-tag tag-critical">Critical</span></label>
+          <label class="checklist-item"><input type="checkbox" onchange="updateProgress()"><span>Gas up the car</span></label>
+          <label class="checklist-item"><input type="checkbox" onchange="updateProgress()"><span>Snacks & drinks packed</span></label>
+          <label class="checklist-item"><input type="checkbox" onchange="updateProgress()"><span>Car charger & phone mount</span></label>
+          <label class="checklist-item"><input type="checkbox" onchange="updateProgress()"><span>Download offline maps</span><span class="item-tag tag-optional">Optional</span></label>
+        </div>
+      </div>
+
+      <!-- PLAYER GEAR -->
+      <div class="checklist-cat">
+        <div class="checklist-cat-title"><i class="fas fa-volleyball" style="color:#d97706"></i> Player Gear</div>
+        <div class="checklist-items">
+          <label class="checklist-item"><input type="checkbox" onchange="updateProgress()"><span>Full uniform (2 sets)</span><span class="item-tag tag-critical">Critical</span></label>
+          <label class="checklist-item"><input type="checkbox" onchange="updateProgress()"><span>2 pairs of court shoes</span><span class="item-tag tag-critical">Critical</span></label>
+          <label class="checklist-item"><input type="checkbox" onchange="updateProgress()"><span>Kneepads</span><span class="item-tag tag-critical">Critical</span></label>
+          <label class="checklist-item"><input type="checkbox" onchange="updateProgress()"><span>Water bottle (filled)</span></label>
+          <label class="checklist-item"><input type="checkbox" onchange="updateProgress()"><span>Athletic tape / first aid</span></label>
+        </div>
+      </div>
+
+      <!-- PARENT ESSENTIALS -->
+      <div class="checklist-cat">
+        <div class="checklist-cat-title"><i class="fas fa-bag-shopping" style="color:#7c3aed"></i> Parent Essentials</div>
+        <div class="checklist-items">
+          <label class="checklist-item"><input type="checkbox" onchange="updateProgress()"><span>Folding chairs / bleacher cushion</span></label>
+          <label class="checklist-item"><input type="checkbox" onchange="updateProgress()"><span>Cash for food / parking</span></label>
+          <label class="checklist-item"><input type="checkbox" onchange="updateProgress()"><span>Sunscreen & layers</span></label>
+          <label class="checklist-item"><input type="checkbox" onchange="updateProgress()"><span>Phone charger / power bank</span></label>
+          <label class="checklist-item"><input type="checkbox" onchange="updateProgress()"><span>AES app / bracket printed</span></label>
+          <label class="checklist-item"><input type="checkbox" onchange="updateProgress()"><span>WhatsApp notifications on</span></label>
+          <label class="checklist-item"><input type="checkbox" onchange="updateProgress()"><span>Team snack / team contribution</span><span class="item-tag tag-optional">Optional</span></label>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="all-done-banner" id="all-done">
+      <i class="fas fa-circle-check" style="font-size:1.2rem"></i>
+      <span>You're all set for NCVA Far Western! Have a great tournament!</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PAGE LAYOUT ============ -->
+<div class="page-layout">
+<div class="main-col">
+
+  <!-- HEADER -->
+  <div class="detail-header">
+    <h1>NCVA Far Western</h1>
+    <span class="badge badge-upcoming">Upcoming</span>
+  </div>
+
+  <!-- TRAVEL BAR -->
+  <div class="travel-info-bar">
+    <!-- Row 1: dates + duration + distance -->
+    <div class="travel-row-1">
+      <div class="travel-item"><i class="fas fa-calendar-days"></i><span>Apr 17–19, 2026</span></div>
+      <div class="travel-item"><i class="fas fa-clock"></i><span>3 days</span></div>
+      <div class="travel-item"><i class="fas fa-road"></i><span>218 miles</span></div>
+      <div class="travel-item"><i class="fas fa-car"></i><span>~4 hr drive</span></div>
+    </div>
+    <!-- Row 2: from → to + nav buttons -->
+    <div class="travel-row-2">
+      <div class="travel-route">
+        <div class="travel-route-from">
+          <strong>1500 Bollinger Canyon Rd, San Ramon, CA</strong>
+          Departing Thu, Apr 16 · 8:00 AM
+        </div>
+        <div class="travel-route-arrow"><i class="fas fa-arrow-right"></i></div>
+        <div class="travel-route-to">
+          <strong>Reno-Sparks Convention Center, Reno, NV</strong>
+          4590 S Virginia St · Est. arrival 12:00 PM
+        </div>
+      </div>
+      <div class="travel-route-divider"></div>
+      <a class="nav-btn nav-btn-gmaps"
+         href="https://www.google.com/maps/dir/1500+Bollinger+Canyon+Rd+San+Ramon+CA/Reno+Sparks+Convention+Center+Reno+NV"
+         target="_blank" rel="noopener">
+        <i class="fab fa-google"></i> Google Maps
+      </a>
+      <a class="nav-btn nav-btn-waze"
+         href="https://www.waze.com/live-map/directions/reno-sparks-convention-center-s-virginia-st-4590?to=place.w.157417867.1574244205.310185&from=ll.37.4405502%2C-121.87844487"
+         target="_blank" rel="noopener">
+        <i class="fas fa-diamond-turn-right"></i> Waze
+      </a>
+    </div>
+  </div>
+
+  <!-- COUNTDOWN -->
+  <div class="countdown-banner">
+    <i class="fas fa-hourglass-half"></i>
+    <strong>4 days away!</strong>
+    <span>Tournament starts Friday, April 17</span>
+  </div>
+
+  <!-- TIMELINE -->
+  <div class="timeline-section">
+    <h3><i class="fas fa-calendar-days"></i> Trip Timeline</h3>
+    <div class="timeline-row">
+      <div class="timeline-item timeline-blue"><div class="timeline-icon"><i class="fas fa-car"></i></div><div class="timeline-date">Thu, Apr 16</div><div class="timeline-label">Travel Day</div></div>
+      <div class="timeline-item timeline-green"><div class="timeline-icon"><i class="fas fa-volleyball"></i></div><div class="timeline-date">Fri, Apr 17</div><div class="timeline-label">Day 1</div></div>
+      <div class="timeline-item timeline-green"><div class="timeline-icon"><i class="fas fa-volleyball"></i></div><div class="timeline-date">Sat, Apr 18</div><div class="timeline-label">Day 2</div></div>
+      <div class="timeline-item timeline-green"><div class="timeline-icon"><i class="fas fa-volleyball"></i></div><div class="timeline-date">Sun, Apr 19</div><div class="timeline-label">Day 3</div></div>
+      <div class="timeline-item timeline-gray"><div class="timeline-icon"><i class="fas fa-house"></i></div><div class="timeline-date">Mon, Apr 20</div><div class="timeline-label">Return Home</div></div>
+    </div>
+  </div>
+
+  <!-- WEATHER -->
+  <div class="detail-card">
+    <h3><i class="fas fa-cloud-sun"></i> Weather Forecast</h3>
+    <div class="weather-grid-small">
+      <div class="weather-day"><div class="weather-date-sm">Apr 17</div><i class="fas fa-sun weather-icon-sm" style="color:#f59e0b"></i><div class="weather-desc-sm">Clear sky</div><div class="weather-temps-sm"><span class="temp-hi">72°</span><span class="temp-lo">45°</span></div><div class="weather-precip-sm"><i class="fas fa-droplet"></i> 5%</div></div>
+      <div class="weather-day"><div class="weather-date-sm">Apr 18</div><i class="fas fa-cloud-sun weather-icon-sm" style="color:#6b7280"></i><div class="weather-desc-sm">Partly cloudy</div><div class="weather-temps-sm"><span class="temp-hi">68°</span><span class="temp-lo">42°</span></div><div class="weather-precip-sm"><i class="fas fa-droplet"></i> 15%</div></div>
+      <div class="weather-day"><div class="weather-date-sm">Apr 19</div><i class="fas fa-cloud-sun weather-icon-sm" style="color:#6b7280"></i><div class="weather-desc-sm">Mainly clear</div><div class="weather-temps-sm"><span class="temp-hi">70°</span><span class="temp-lo">44°</span></div><div class="weather-precip-sm"><i class="fas fa-droplet"></i> 10%</div></div>
+    </div>
+    <div class="weather-links">
+      <a class="map-link"><i class="fas fa-temperature-half"></i> AccuWeather forecast</a>
+    </div>
+  </div>
+
+  <!-- HOTEL + CAR -->
+  <div class="booking-pair">
+    <div class="detail-card">
+      <h3><i class="fas fa-hotel"></i> Hotel</h3>
+      <div class="booking-name">Extended Stay America Suites</div>
+      <div class="booking-detail"><i class="fas fa-location-dot"></i> 9795 Gateway Drive, Reno, NV 89521</div>
+      <div class="booking-detail"><i class="fas fa-phone"></i> 775-852-5611</div>
+      <div class="booking-row"><span class="booking-key">Check-in</span><span>Thu Apr 16 · 3:00 PM</span></div>
+      <div class="booking-row"><span class="booking-key">Check-out</span><span>Sun Apr 19 · 11:00 AM</span></div>
+      <div class="booking-row"><span class="booking-key">Conf #</span><span class="booking-conf">5601396408 · PIN: 4389</span></div>
+      <div class="booking-row"><span class="booking-key">Priceline #</span><span class="booking-conf">267-464-443-96</span></div>
+      <div class="booking-perks"><span class="perk-badge"><i class="fas fa-check"></i> Breakfast</span><span class="perk-badge"><i class="fas fa-check"></i> Free parking</span><span class="perk-badge"><i class="fas fa-check"></i> WiFi</span></div>
+      <div class="booking-cancel"><i class="fas fa-clock"></i> Cancel by: Thu Apr 16 at 5:59 PM · 29% penalty after</div>
+    </div>
+    <div class="detail-card">
+      <h3><i class="fas fa-car"></i> Rental Car</h3>
+      <div class="booking-name">Alamo – Full-size SUV AWD/4×4</div>
+      <div class="booking-detail"><i class="fas fa-car-side"></i> Chevy Tahoe / Ford Expedition</div>
+      <div class="booking-detail"><i class="fas fa-location-dot"></i> SJC – 1659 Airport Blvd</div>
+      <div class="booking-row"><span class="booking-key">Pick-up</span><span>Thu Apr 16 · 12:00 PM</span></div>
+      <div class="booking-row"><span class="booking-key">Drop-off</span><span>Mon Apr 20 · 12:00 PM</span></div>
+      <div class="booking-row"><span class="booking-key">Total</span><span class="booking-conf">$420.31</span></div>
+      <div class="booking-row"><span class="booking-key">Conf #</span><span class="booking-conf">ALM-99284756</span></div>
+      <div class="booking-perks"><span class="perk-badge"><i class="fas fa-check"></i> Unlimited mileage</span><span class="perk-badge"><i class="fas fa-check"></i> AWD/4×4</span></div>
+    </div>
+  </div>
+
+  <!-- CONF NUMBERS -->
+  <div class="detail-card">
+    <h3><i class="fas fa-hashtag"></i> Confirmation Numbers</h3>
+    <div class="conf-grid">
+      <div class="conf-item"><span class="conf-key">Hotel conf #</span><span class="conf-val">5601396408 · PIN 4389</span></div>
+      <div class="conf-item"><span class="conf-key">Priceline #</span><span class="conf-val">267-464-443-96</span></div>
+      <div class="conf-item"><span class="conf-key">Car rental conf #</span><span class="conf-val">ALM-99284756</span></div>
+      <div class="conf-item"><span class="conf-key">Hotel phone</span><span class="conf-val">775-852-5611</span></div>
+    </div>
+  </div>
+
+  <!-- PARKING + FOOD -->
+  <div class="notes-row">
+    <div class="detail-card"><h3><i class="fas fa-square-parking"></i> Parking Tips</h3><p style="font-size:0.92rem;color:#333;line-height:1.6">Lot C (916 spaces, Gates 5 & 6) is largest. Arrive before 6:45 AM for AM wave parking.</p></div>
+    <div class="detail-card"><h3><i class="fas fa-utensils"></i> Food Notes</h3><p style="font-size:0.92rem;color:#333;line-height:1.6">Food court in Section B: pizza, burgers, chicken tenders. Pack lunch for Day 1.</p></div>
+  </div>
+
+  <!-- ROAD TRIP INFO -->
+  <div class="roadtrip-card">
+    <div class="roadtrip-tabs">
+      <div class="roadtrip-tab active" onclick="switchTab('road')"><i class="fas fa-car"></i> On the Road <small style="color:#9ca3af;font-weight:400">(I-80)</small></div>
+      <div class="roadtrip-tab" onclick="switchTab('dest')"><i class="fas fa-location-dot"></i> In Reno</div>
+    </div>
+
+    <!-- TAB: ON THE ROAD -->
+    <div class="roadtrip-pane active" id="pane-road">
+      <div class="road-stops">
+        <div class="road-stop">
+          <span class="road-stop-icon">🛑</span>
+          <div class="road-stop-body">
+            <div class="road-stop-name">Nut Tree Plaza — Vacaville, CA</div>
+            <div class="road-stop-dist">~45 min from San Ramon · Mile 55 on I-80</div>
+            <div class="road-stop-desc">Great first stretch break. In-N-Out, Panda, Target all walkable. Kids' playground. Good fuel stop.</div>
+          </div>
+        </div>
+        <div class="road-stop">
+          <span class="road-stop-icon">⛽</span>
+          <div class="road-stop-body">
+            <div class="road-stop-name">Sacramento — Last major fuel & food</div>
+            <div class="road-stop-dist">~1.5 hr from San Ramon · Mile 88</div>
+            <div class="road-stop-desc">Stock up here — options get sparse after Auburn. Costco gas on Folsom Blvd if you want cheap diesel.</div>
+          </div>
+        </div>
+        <div class="road-stop">
+          <span class="road-stop-icon">🏔️</span>
+          <div class="road-stop-body">
+            <div class="road-stop-name">Donner Lake Overlook — Truckee, CA</div>
+            <div class="road-stop-dist">~2.5 hr from San Ramon · Mile 185</div>
+            <div class="road-stop-desc">Stunning mountain lake view right off I-80. Quick 5-min pull-off. Historic Donner Party site nearby if kids are curious. Check chain controls before Donner Summit in winter/spring.</div>
+          </div>
+        </div>
+        <div class="road-stop">
+          <span class="road-stop-icon">☕</span>
+          <div class="road-stop-body">
+            <div class="road-stop-name">Truckee Downtown</div>
+            <div class="road-stop-dist">~2.5 hr from San Ramon · Exit 188</div>
+            <div class="road-stop-desc">Charming mountain town 20 min before Reno. Good coffee at Coffeebar Truckee. Stretch legs on the historic main street. Last scenic stop before the desert.</div>
+          </div>
+        </div>
+        <div class="road-stop" style="border-left-color:#86efac">
+          <span class="road-stop-icon">🎰</span>
+          <div class="road-stop-body">
+            <div class="road-stop-name">Welcome to Reno!</div>
+            <div class="road-stop-dist">~4 hr total · Off I-80 at Virginia St</div>
+            <div class="road-stop-desc">You've made it! Head straight to Extended Stay — check-in is 3 PM. Grab Picky Sticky or Louis' Basque Corner for dinner.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: IN RENO -->
+    <div class="roadtrip-pane" id="pane-dest">
+      <div class="dest-sections">
+
+        <div class="dest-section">
+          <h4><i class="fas fa-utensils"></i> Places to Eat</h4>
+          <div class="dest-list">
+            <div class="dest-item"><i class="fas fa-star"></i><div><div>Louis' Basque Corner</div><div class="dest-item-sub">Famous family-style Basque dinner · 301 E 4th St</div></div></div>
+            <div class="dest-item"><i class="fas fa-mug-hot"></i><div><div>Squeeze In</div><div class="dest-item-sub">Best breakfast in Reno · 5255 Vista Blvd</div></div></div>
+            <div class="dest-item"><i class="fas fa-beer-mug-empty"></i><div><div>Great Basin Brewing</div><div class="dest-item-sub">Local craft beer & burgers · 5525 S Virginia St</div></div></div>
+            <div class="dest-item"><i class="fas fa-burger"></i><div><div>Biting Fly Burger</div><div class="dest-item-sub">Local favorite smash burgers · near RSCC</div></div></div>
+            <div class="dest-item"><i class="fas fa-pizza-slice"></i><div><div>Two Chicks</div><div class="dest-item-sub">Crowd-pleasing all-day breakfast & brunch</div></div></div>
+          </div>
+        </div>
+
+        <div class="dest-section">
+          <h4><i class="fas fa-store"></i> Big Box & Costco</h4>
+          <div class="dest-list">
+            <div class="store-item"><i class="fas fa-warehouse"></i><span>Costco · 6650 S Virginia St</span><span class="store-badge store-badge-costco">Costco</span></div>
+            <div class="store-item"><i class="fas fa-store"></i><span>Sam's Club · 5420 Disc Dr</span><span class="store-badge store-badge-sams">Sam's</span></div>
+            <div class="store-item"><i class="fas fa-store"></i><span>Walmart · 2425 E 2nd St</span><span class="store-badge store-badge-walmart">Walmart</span></div>
+            <div class="store-item"><i class="fas fa-store"></i><span>Target · 5350 Kietzke Ln</span><span class="store-badge store-badge-target">Target</span></div>
+            <div class="store-item"><i class="fas fa-store"></i><span>Target · 4865 Kietzke Ln</span><span class="store-badge store-badge-target">Target</span></div>
+          </div>
+          <div style="margin-top:0.75rem">
+            <h4><i class="fas fa-futbol"></i> Local Sports</h4>
+            <div class="dest-list">
+              <div class="dest-item"><i class="fas fa-baseball"></i><div><div>Reno Aces</div><div class="dest-item-sub">AAA Baseball (Diamondbacks affiliate) · Greater Nevada Field</div></div></div>
+              <div class="dest-item"><i class="fas fa-hockey-puck"></i><div><div>Reno Ice</div><div class="dest-item-sub">Local hockey rink, open skate sessions available</div></div></div>
+              <div class="dest-item"><i class="fas fa-trophy"></i><div><div>Nevada Wolf Pack</div><div class="dest-item-sub">UNR college sports — Mackay Stadium</div></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dest-section" style="grid-column:1/-1">
+          <h4><i class="fas fa-lightbulb"></i> Fun Facts About Reno</h4>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem">
+            <div class="fact-pill">🎰 "The Biggest Little City in the World" — the famous arch has been on Virginia St since 1926</div>
+            <div class="fact-pill">☀️ Reno gets 300+ sunny days/year — more than Miami or Los Angeles</div>
+            <div class="fact-pill">🗺️ Fun geography: Reno is actually <em>west</em> of Los Angeles on the map</div>
+            <div class="fact-pill">🏔️ 4,500 ft elevation — altitude can affect athletes; hydrate extra!</div>
+            <div class="fact-pill">🚗 National Automobile Museum on Lake St — world-class car collection (great if you have downtime)</div>
+            <div class="fact-pill">🎿 Lake Tahoe is only 45 min away — stunning if you want to extend the trip</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- LINKS -->
+  <div class="resource-links">
+    <h2><i class="fas fa-link"></i> Useful Links</h2>
+    <div class="links-grid">
+      <a class="resource-card"><i class="fas fa-volleyball"></i><span>NCVA Events</span></a>
+      <a class="resource-card"><i class="fas fa-table"></i><span>PL Standings</span></a>
+      <a class="resource-card"><i class="fas fa-trophy"></i><span>All Points</span></a>
+      <a class="resource-card"><i class="fas fa-ranking-star"></i><span>AES Bracket</span></a>
+      <a class="resource-card"><i class="fas fa-map"></i><span>Venue Map</span></a>
+      <a class="resource-card resource-card-caltrans"><i class="fas fa-road"></i><span>CalTrans Road Conditions</span></a>
+      <a class="resource-card" style="color:#25d366"><i class="fab fa-whatsapp" style="color:#25d366"></i><span>Parents WhatsApp</span></a>
+    </div>
+  </div>
+
+  <!-- ACTIONS -->
+  <div class="checklist-link-section">
+    <a class="checklist-link"><i class="fas fa-pencil"></i> Edit Booking Details</a>
+  </div>
+  <div class="detail-actions">
+    <a class="btn btn-primary">Edit Tournament</a>
+    <button class="btn btn-cancel"><i class="fas fa-ban"></i> Cancel Tournament</button>
+    <button class="btn btn-danger">Delete</button>
+  </div>
+</div><!-- /main-col -->
+
+<!-- ============ SIDEBAR ============ -->
+<div class="side-col">
+  <div class="side-panel">
+    <div class="side-panel-header">
+      <h3><i class="fab fa-whatsapp wa-icon"></i> Pinned Announcements</h3>
+      <span class="side-panel-badge">3 pinned</span>
+    </div>
+    <div class="pinned-list">
+      <div class="pinned-msg">
+        <div class="pinned-meta"><span class="pinned-author">Coach Mike</span><span class="pinned-pin"><i class="fas fa-thumbtack"></i> Pinned</span><span class="pinned-time">Apr 14</span></div>
+        <div class="pinned-text">Report time is <strong>7:00 AM Friday</strong> at Gate 5. Wear full uniform. Bring 2 pairs of shoes.</div>
+      </div>
+      <div class="pinned-msg">
+        <div class="pinned-meta"><span class="pinned-author">Coach Mike</span><span class="pinned-pin"><i class="fas fa-thumbtack"></i> Pinned</span><span class="pinned-time">Apr 12</span></div>
+        <div class="pinned-text">Hotel: Extended Stay, 9795 Gateway Dr. Check-in Thursday after 3 PM. Breakfast 6:30 AM.</div>
+      </div>
+      <div class="pinned-msg">
+        <div class="pinned-meta"><span class="pinned-author">UVAC Admin</span><span class="pinned-pin"><i class="fas fa-thumbtack"></i> Pinned</span><span class="pinned-time">Apr 10</span></div>
+        <div class="pinned-text">AES bracket is live! We're in Pool B — first match Friday 8:30 AM vs Golden Empire.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div><!-- /page-layout -->
+</main>
+<footer>UVAC Urban Volleyball 15 TS | Version A Preview</footer>
+
+<script>
+const TOTAL = 22;
+
+function updateProgress() {
+  const boxes = document.querySelectorAll('.checklist-item input[type=checkbox]');
+  const checked = [...boxes].filter(b => b.checked).length;
+  const pct = Math.round(checked / TOTAL * 100);
+
+  document.getElementById('score-text').textContent = checked + ' / ' + TOTAL + ' complete';
+  document.getElementById('progress-fill').style.width = pct + '%';
+
+  // Strike through checked items
+  boxes.forEach(b => {
+    b.closest('.checklist-item').classList.toggle('checked', b.checked);
+  });
+
+  // Show all-done banner
+  const banner = document.getElementById('all-done');
+  banner.style.display = checked === TOTAL ? 'flex' : 'none';
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.roadtrip-tab').forEach((t, i) => {
+    t.classList.toggle('active', ['road','dest'][i] === tab);
+  });
+  document.querySelectorAll('.roadtrip-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('pane-' + tab).classList.add('active');
+}
+
+function toggleCurtain() {
+  const curtain = document.getElementById('updates-curtain');
+  const icon = document.getElementById('pull-icon');
+  const label = document.getElementById('pull-label');
+  const open = curtain.classList.toggle('open');
+  icon.classList.toggle('open', open);
+  label.textContent = open ? 'Pull up to close' : '3 more updates — pull for more';
+}
+
+function toggleReadiness() {
+  const body = document.getElementById('readiness-body');
+  const icon = document.getElementById('toggle-icon');
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  icon.classList.toggle('open', !open);
+}
+
+// Init on load
+updateProgress();
+</script>
+</body>
+</html>

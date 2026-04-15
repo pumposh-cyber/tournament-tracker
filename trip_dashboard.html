@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+{% block title %}Trip Dashboard – {{ tournament.event }}{% endblock %}
+
+{% block content %}
+<div class="trip-dashboard">
+  <div class="trip-header">
+    <a href="{{ url_for('tournament_detail', tournament_id=tournament.id) }}" class="back-link">
+      <i class="fas fa-arrow-left"></i> Back to Tournament
+    </a>
+    <div class="trip-header-content">
+      <div>
+        <h1><i class="fas fa-map-location-dot"></i> Trip Dashboard</h1>
+        <p class="trip-subtitle">{{ tournament.event }} &middot; {{ tournament.city }} &middot; {{ tournament.dates_display }}</p>
+      </div>
+      <a href="{{ url_for('trip_booking', tournament_id=tournament.id) }}" class="btn btn-primary">
+        <i class="fas fa-pencil"></i> {{ 'Edit' if booking else 'Add' }} Booking Details
+      </a>
+    </div>
+  </div>
+
+  {% if booking and booking.weather_alert %}
+  <div class="trip-alert">
+    <i class="fas fa-triangle-exclamation"></i>
+    <span>{{ booking.weather_alert }}</span>
+  </div>
+  {% endif %}
+
+  <!-- STATS ROW -->
+  <div class="trip-stats">
+    <div class="trip-stat">
+      <div class="trip-stat-label">Distance</div>
+      <div class="trip-stat-value">{{ distance or '—' }}{% if distance %} mi{% endif %}</div>
+    </div>
+    <div class="trip-stat">
+      <div class="trip-stat-label">Drive time</div>
+      <div class="trip-stat-value">{{ drive_time or '—' }}</div>
+    </div>
+    <div class="trip-stat">
+      <div class="trip-stat-label">Duration</div>
+      <div class="trip-stat-value">{{ day_count }} day{{ 's' if day_count != 1 else '' }}</div>
+    </div>
+    <div class="trip-stat">
+      <div class="trip-stat-label">Hotel status</div>
+      <div class="trip-stat-value">
+        {% if booking and booking.hotel_conf %}
+          <span class="badge badge-upcoming">Booked</span>
+        {% else %}
+          <span class="badge badge-cancelled">Needed</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="trip-stat">
+      <div class="trip-stat-label">Car status</div>
+      <div class="trip-stat-value">
+        {% if booking and booking.car_conf %}
+          <span class="badge badge-upcoming">Booked</span>
+        {% else %}
+          <span class="badge badge-cancelled">Needed</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="trip-grid">
+
+    <!-- TIMELINE -->
+    <div class="trip-card trip-card-full">
+      <h2><i class="fas fa-calendar-days"></i> Trip Timeline</h2>
+      <div class="timeline-row">
+        {% for day in timeline_days %}
+        <div class="timeline-item timeline-{{ day.color }}">
+          <div class="timeline-icon"><i class="fas fa-{{ day.icon }}"></i></div>
+          <div class="timeline-date">{{ day.date }}</div>
+          <div class="timeline-label">{{ day.label }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- HOTEL -->
+    <div class="trip-card">
+      <h2><i class="fas fa-hotel"></i> Hotel</h2>
+      {% if booking and booking.hotel_name %}
+        <div class="booking-name">{{ booking.hotel_name }}</div>
+        {% if booking.hotel_address %}<div class="booking-detail"><i class="fas fa-location-dot"></i> {{ booking.hotel_address }}</div>{% endif %}
+        {% if booking.hotel_phone %}<div class="booking-detail"><i class="fas fa-phone"></i> {{ booking.hotel_phone }}</div>{% endif %}
+        <div class="booking-row">
+          <span class="booking-key">Check-in</span><span>{{ booking.hotel_checkin or '—' }}</span>
+        </div>
+        <div class="booking-row">
+          <span class="booking-key">Check-out</span><span>{{ booking.hotel_checkout or '—' }}</span>
+        </div>
+        {% if booking.hotel_conf %}
+        <div class="booking-row">
+          <span class="booking-key">Conf #</span><span class="booking-conf">{{ booking.hotel_conf }}{% if booking.hotel_pin %} · PIN: {{ booking.hotel_pin }}{% endif %}</span>
+        </div>
+        {% endif %}
+        {% if booking.hotel_priceline %}
+        <div class="booking-row">
+          <span class="booking-key">Priceline #</span><span class="booking-conf">{{ booking.hotel_priceline }}</span>
+        </div>
+        {% endif %}
+        {% if booking.hotel_perks %}
+        <div class="booking-perks">
+          {% for perk in booking.hotel_perks.split(',') %}
+          <span class="perk-badge"><i class="fas fa-check"></i> {{ perk.strip() }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% if booking.hotel_cancel_deadline %}
+        <div class="booking-cancel">
+          <i class="fas fa-clock"></i> Cancel by: {{ booking.hotel_cancel_deadline }}
+        </div>
+        {% endif %}
+      {% else %}
+        <div class="booking-empty">
+          <i class="fas fa-hotel"></i>
+          <p>No hotel booked yet</p>
+          <a href="{{ url_for('trip_booking', tournament_id=tournament.id) }}" class="btn btn-small btn-primary">Add details</a>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- CAR -->
+    <div class="trip-card">
+      <h2><i class="fas fa-car"></i> Rental Car</h2>
+      {% if booking and booking.car_company %}
+        <div class="booking-name">{{ booking.car_company }} – {{ booking.car_type }}</div>
+        {% if booking.car_models %}<div class="booking-detail"><i class="fas fa-car-side"></i> {{ booking.car_models }}</div>{% endif %}
+        {% if booking.car_location %}<div class="booking-detail"><i class="fas fa-location-dot"></i> {{ booking.car_location }}</div>{% endif %}
+        <div class="booking-row"><span class="booking-key">Pick-up</span><span>{{ booking.car_pickup or '—' }}</span></div>
+        <div class="booking-row"><span class="booking-key">Drop-off</span><span>{{ booking.car_dropoff or '—' }}</span></div>
+        <div class="booking-row"><span class="booking-key">Total</span><span class="booking-total">{{ booking.car_total or '—' }}</span></div>
+        {% if booking.car_conf %}
+        <div class="booking-row"><span class="booking-key">Conf #</span><span class="booking-conf">{{ booking.car_conf }}</span></div>
+        {% endif %}
+        {% if booking.car_perks %}
+        <div class="booking-perks">
+          {% for perk in booking.car_perks.split(',') %}
+          <span class="perk-badge"><i class="fas fa-check"></i> {{ perk.strip() }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% if booking.car_notes %}<div class="booking-cancel"><i class="fas fa-info-circle"></i> {{ booking.car_notes }}</div>{% endif %}
+      {% else %}
+        <div class="booking-empty">
+          <i class="fas fa-car"></i>
+          <p>No rental car booked yet</p>
+          <a href="{{ url_for('trip_booking', tournament_id=tournament.id) }}" class="btn btn-small btn-primary">Add details</a>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- WEATHER -->
+    <div class="trip-card">
+      <h2><i class="fas fa-cloud-sun"></i> Weather Forecast</h2>
+      {% if weather and weather.type == 'forecast' and weather.days %}
+        <div class="weather-grid-small">
+          {% for day in weather.days %}
+          <div class="weather-day">
+            <div class="weather-date-sm">{{ day.date }}</div>
+            <i class="fas fa-{{ weather_icon(day.weather_code) }} weather-icon-sm"></i>
+            <div class="weather-desc-sm">{{ weather_desc(day.weather_code) }}</div>
+            <div class="weather-temps-sm">
+              <span class="temp-hi">{{ day.high|round|int }}°</span>
+              <span class="temp-lo">{{ day.low|round|int }}°</span>
+            </div>
+            {% if day.precip_chance %}<div class="weather-precip-sm"><i class="fas fa-droplet"></i> {{ day.precip_chance }}%</div>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      {% elif weather %}
+        <div class="weather-notice"><i class="fas fa-info-circle"></i> {{ weather.message }}</div>
+      {% else %}
+        <div class="weather-notice">Weather data unavailable</div>
+      {% endif %}
+    </div>
+
+    <!-- PARKING -->
+    <div class="trip-card">
+      <h2><i class="fas fa-square-parking"></i> Parking Guide</h2>
+      {% if booking and booking.parking_tips %}
+        <p class="coach-note">{{ booking.parking_tips }}</p>
+      {% else %}
+        <div class="parking-lots">
+          <div class="lot-row"><span class="lot-name">Lot A</span><span class="lot-spaces">111 spaces</span><span class="lot-note">Gate 1 · South Virginia</span></div>
+          <div class="lot-row"><span class="lot-name">Lot B/B1/B2</span><span class="lot-spaces">751 spaces</span><span class="lot-note">West side · Peckham Ln</span></div>
+          <div class="lot-row lot-best"><span class="lot-name">Lot C ⭐</span><span class="lot-spaces">916 spaces</span><span class="lot-note">Largest · Gates 5 &amp; 6</span></div>
+          <div class="lot-row"><span class="lot-name">Lot E/F</span><span class="lot-spaces">378 spaces</span><span class="lot-note">East side · Gate 4</span></div>
+        </div>
+        <div class="parking-tip"><i class="fas fa-clock"></i> Arrive before 6:45 AM for AM wave parking</div>
+      {% endif %}
+    </div>
+
+    <!-- COACH NOTES -->
+    <div class="trip-card">
+      <h2><i class="fas fa-whistle"></i> Coach Notes</h2>
+      {% if booking and booking.coach_notes %}
+        <p class="coach-note">{{ booking.coach_notes }}</p>
+      {% else %}
+        <ul class="coach-tips">
+          <li><i class="fas fa-check-circle"></i> Skip heavy camp setup — RSCC has tables &amp; chairs inside</li>
+          <li><i class="fas fa-check-circle"></i> Food court on-site (pizza, burgers, chicken tenders)</li>
+          <li><i class="fas fa-triangle-exclamation"></i> Check Donner Summit / I-80 conditions night before</li>
+          <li><i class="fas fa-car"></i> AWD/4×4 recommended if snow forecast on summit</li>
+          <li><i class="fas fa-clock"></i> Drive home 3.5–10 hrs depending on traffic/weather</li>
+        </ul>
+      {% endif %}
+    </div>
+
+    <!-- VENUE QUICK REF -->
+    <div class="trip-card trip-card-full">
+      <h2><i class="fas fa-building"></i> Venue Quick Reference – Reno-Sparks Convention Center</h2>
+      <div class="venue-grid">
+        <div class="venue-item">
+          <div class="venue-label"><i class="fas fa-door-open"></i> Registration</div>
+          <div class="venue-val">Guest Registration &amp; Tickets area (Hall 1-2-3 zone) · Main Entrance off South Virginia St</div>
+        </div>
+        <div class="venue-item">
+          <div class="venue-label"><i class="fas fa-utensils"></i> Food Court</div>
+          <div class="venue-val">Section B · Pizza, burgers, hotdogs, chicken tenders</div>
+        </div>
+        <div class="venue-item">
+          <div class="venue-label"><i class="fas fa-couch"></i> Players Lounge</div>
+          <div class="venue-val">Section E (yellow on map) · Tables &amp; chairs first-come</div>
+        </div>
+        <div class="venue-item">
+          <div class="venue-label"><i class="fas fa-whistle"></i> Coaches Hospitality</div>
+          <div class="venue-val">Section D (orange on map)</div>
+        </div>
+        <div class="venue-item">
+          <div class="venue-label"><i class="fas fa-elevator"></i> Parents Lounge</div>
+          <div class="venue-val">Via elevator (purple dot on map)</div>
+        </div>
+        <div class="venue-item">
+          <div class="venue-label"><i class="fas fa-kit-medical"></i> Medical Stations</div>
+          <div class="venue-val">2 locations: near Court 40 area &amp; near Courts 21–22 (red dots)</div>
+        </div>
+        <div class="venue-item">
+          <div class="venue-label"><i class="fas fa-magnifying-glass"></i> Lost &amp; Found</div>
+          <div class="venue-val">Registration Lobby area (green dot)</div>
+        </div>
+        <div class="venue-item">
+          <div class="venue-label"><i class="fas fa-bus"></i> Bus / Taxi</div>
+          <div class="venue-val">Loading/unloading on south side of building</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONFIRMATIONS -->
+    <div class="trip-card trip-card-full">
+      <h2><i class="fas fa-hashtag"></i> Confirmation Numbers</h2>
+      <div class="conf-grid">
+        {% if booking %}
+          {% if booking.hotel_conf %}<div class="conf-item"><span class="conf-key">Hotel conf #</span><span class="conf-val">{{ booking.hotel_conf }}{% if booking.hotel_pin %} · PIN {{ booking.hotel_pin }}{% endif %}</span></div>{% endif %}
+          {% if booking.hotel_priceline %}<div class="conf-item"><span class="conf-key">Priceline #</span><span class="conf-val">{{ booking.hotel_priceline }}</span></div>{% endif %}
+          {% if booking.car_conf %}<div class="conf-item"><span class="conf-key">Car rental conf #</span><span class="conf-val">{{ booking.car_conf }}</span></div>{% endif %}
+          {% if booking.hotel_phone %}<div class="conf-item"><span class="conf-key">Hotel phone</span><span class="conf-val">{{ booking.hotel_phone }}</span></div>{% endif %}
+        {% else %}
+          <p class="booking-empty-inline">Add booking details to see confirmation numbers here.</p>
+        {% endif %}
+      </div>
+    </div>
+
+  </div><!-- end trip-grid -->
+
+  <div class="trip-actions">
+    <a href="{{ url_for('tournament_checklist', tournament_id=tournament.id) }}" class="btn btn-primary">
+      <i class="fas fa-clipboard-check"></i> Packing Checklist
+    </a>
+    <a href="https://quickmap.dot.ca.gov" target="_blank" rel="noopener" class="btn">
+      <i class="fas fa-road"></i> CalTrans Road Conditions
+    </a>
+    <a href="https://www.google.com/maps/dir/{{ home_city }}/{{ tournament.city }}" target="_blank" rel="noopener" class="btn">
+      <i class="fas fa-map-location-dot"></i> Get Directions
+    </a>
+    <a href="{{ url_for('trip_booking', tournament_id=tournament.id) }}" class="btn">
+      <i class="fas fa-pencil"></i> Edit Booking
+    </a>
+  </div>
+</div>
+{% endblock %}
