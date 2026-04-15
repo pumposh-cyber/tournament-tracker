@@ -1,4 +1,5 @@
 import os
+import logging
 from datetime import datetime, timedelta
 from flask import render_template, request, redirect, url_for, flash, session
 from flask_login import current_user
@@ -267,9 +268,8 @@ def import_announcements(tournament_id):
             else:
                 try:
                     import json
-                    import google.generativeai as genai
-                    genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))
-                    model = genai.GenerativeModel("gemini-2.5-flash")
+                    from google import genai as _genai
+                    _gclient = _genai.Client(api_key=os.environ.get("GOOGLE_API_KEY"))
                     prompt = f"""You are parsing a WhatsApp group chat export for a youth volleyball tournament parent group.
 
 Extract the most important messages — coach instructions, logistics, schedule info, hotel/car reminders, and any key updates.
@@ -287,7 +287,7 @@ Return ONLY a JSON array. No explanation, no markdown fences. Example:
 WhatsApp chat:
 {raw[:6000]}"""
 
-                    response = model.generate_content(prompt)
+                    response = _gclient.models.generate_content(model="gemini-2.5-flash", contents=prompt)
                     raw_json = response.text.strip().lstrip("```json").lstrip("```").rstrip("```").strip()
                     extracted = json.loads(raw_json)
                 except Exception as e:
@@ -374,10 +374,9 @@ def api_chat():
         prompt += f"Parent: {message}\nVolleyAI:"
         try:
             import json as _json
-            import google.generativeai as genai
-            genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))
-            model = genai.GenerativeModel("gemini-2.5-flash")
-            raw = model.generate_content(prompt).text.strip()
+            from google import genai as _genai
+            _gc = _genai.Client(api_key=os.environ.get("GOOGLE_API_KEY"))
+            raw = _gc.models.generate_content(model="gemini-2.5-flash", contents=prompt).text.strip()
             fill_form = None
             display_text = raw
             if "FILL:" in raw:
@@ -439,9 +438,9 @@ def api_chat():
     prompt += f"Parent: {message}\nVolleyAI:"
 
     try:
-        genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel("gemini-2.5-flash")
-        response = model.generate_content(prompt)
+        from google import genai as _genai
+        _gc = _genai.Client(api_key=os.environ.get("GOOGLE_API_KEY"))
+        response = _gc.models.generate_content(model="gemini-2.5-flash", contents=prompt)
         return {"response": response.text.strip()}
     except Exception as e:
         logging.error(f"Chat error: {e}")
