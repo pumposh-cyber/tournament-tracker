@@ -4,221 +4,520 @@
 
 {% block content %}
 <div class="detail-page">
-    <a href="{{ url_for('index') }}" class="back-link"><i class="fas fa-arrow-left"></i> Back to Schedule</a>
+  <a href="{{ url_for('index') }}" class="back-link"><i class="fas fa-arrow-left"></i> Back to Schedule</a>
 
-    <div class="detail-header">
-        <h1 class="{% if tournament.is_cancelled %}cancelled-text{% endif %}">{{ tournament.event }}</h1>
-        {% if tournament.is_cancelled %}
-            <span class="badge badge-cancelled">Cancelled</span>
-        {% elif tournament.date_start < now %}
-            <span class="badge badge-past">Past Event</span>
-        {% else %}
-            <span class="badge badge-upcoming">Upcoming</span>
-        {% endif %}
+  {# ── UPDATES BANNER ──────────────────────────────────────────── #}
+  {% if booking and booking.weather_alert %}
+  <div class="upd-banner">
+    <div class="upd-banner-top">
+      <i class="fas fa-bell upd-banner-icon"></i>
+      <div class="upd-dot upd-dot-amber"></div>
+      <span class="upd-banner-text"><strong>Travel alert</strong> — {{ booking.weather_alert }}</span>
+      <span class="upd-banner-badge">Alert</span>
     </div>
+  </div>
+  {% endif %}
 
+  {# ── HEADER ──────────────────────────────────────────────────── #}
+  <div class="detail-header">
+    <h1 class="{% if tournament.is_cancelled %}cancelled-text{% endif %}">{{ tournament.event }}</h1>
     {% if tournament.is_cancelled %}
-    <div class="cancellation-banner">
-        <div class="cancellation-icon">
-            <i class="fas fa-triangle-exclamation"></i>
-        </div>
-        <div class="cancellation-info">
-            <strong>This tournament has been cancelled</strong>
-            {% if tournament.cancellation_reason %}
-                <p>{{ tournament.cancellation_reason }}</p>
-            {% endif %}
-        </div>
-        <form action="{{ url_for('restore_tournament', tournament_id=tournament.id) }}" method="POST" class="inline-form">
-            <button type="submit" class="btn btn-restore">
-                <i class="fas fa-rotate-left"></i> Restore
-            </button>
-        </form>
-    </div>
+      <span class="badge badge-cancelled">Cancelled</span>
+    {% elif tournament.date_end < now %}
+      <span class="badge badge-done"><i class="fas fa-circle-check"></i> Done</span>
+    {% else %}
+      <span class="badge badge-upcoming">Upcoming</span>
     {% endif %}
+  </div>
 
-    <div class="travel-info-bar">
-        <div class="travel-item">
-            <i class="fas fa-calendar-days"></i>
-            <span>{{ tournament.dates_display }}</span>
-        </div>
-        <div class="travel-item">
-            <i class="fas fa-clock"></i>
-            <span>{{ day_count }} day{{ 's' if day_count != 1 else '' }}</span>
-        </div>
-        {% if distance is not none %}
-        <div class="travel-item">
-            <i class="fas fa-road"></i>
-            <span>{{ distance }} miles from {{ home_city }}</span>
-        </div>
-        {% endif %}
-        {% if drive_time %}
-        <div class="travel-item">
-            <i class="fas fa-car"></i>
-            <span>{{ drive_time }}</span>
-        </div>
-        {% endif %}
-        {% if distance is not none %}
-        <div class="travel-item">
-            <a href="https://www.google.com/maps/dir/{{ home_city }}/{{ tournament.city }}" target="_blank" rel="noopener" class="map-link">
-                <i class="fas fa-map-location-dot"></i> Get Directions
-            </a>
-        </div>
-        {% endif %}
+  {% if tournament.is_cancelled %}
+  <div class="cancellation-banner">
+    <div class="cancellation-icon"><i class="fas fa-triangle-exclamation"></i></div>
+    <div class="cancellation-info">
+      <strong>This tournament has been cancelled</strong>
+      {% if tournament.cancellation_reason %}<p>{{ tournament.cancellation_reason }}</p>{% endif %}
     </div>
+    <form action="{{ url_for('restore_tournament', tournament_id=tournament.id) }}" method="POST" class="inline-form">
+      <button type="submit" class="btn btn-restore"><i class="fas fa-rotate-left"></i> Restore</button>
+    </form>
+  </div>
+  {% endif %}
 
-    {% if weather %}
-    <div class="weather-section">
-        <h2><i class="fas fa-cloud-sun"></i> Weather Forecast</h2>
-        {% if weather.type == 'forecast' and weather.days %}
-        <div class="weather-grid">
-            {% for day in weather.days %}
-            <div class="weather-card">
-                <div class="weather-date">{{ day.date }}</div>
-                <div class="weather-icon-large">
-                    <i class="fas fa-{{ weather_icon(day.weather_code) }}"></i>
-                </div>
-                <div class="weather-condition">{{ weather_desc(day.weather_code) }}</div>
-                <div class="weather-temps">
-                    <span class="temp-high"><i class="fas fa-arrow-up"></i> {{ day.high|round|int }}°F</span>
-                    <span class="temp-low"><i class="fas fa-arrow-down"></i> {{ day.low|round|int }}°F</span>
-                </div>
-                {% if day.precip_chance is not none %}
-                <div class="weather-precip">
-                    <i class="fas fa-droplet"></i> {{ day.precip_chance }}% rain
-                </div>
-                {% endif %}
+  {# ── PRE-TRIP READINESS (upcoming only) ──────────────────────── #}
+  {% if tournament.date_end >= now and not tournament.is_cancelled %}
+  <div class="readiness-panel">
+    <div class="readiness-header" onclick="toggleReadiness()">
+      <div class="readiness-title">
+        <i class="fas fa-clipboard-list"></i>
+        Pre-Trip Readiness
+      </div>
+      <div class="readiness-meta">
+        <span class="readiness-score" id="score-text">0 / 22 complete</span>
+        <div class="readiness-bar-wrap"><div class="readiness-bar-fill" id="progress-fill" style="width:0%"></div></div>
+        <i class="fas fa-chevron-down readiness-toggle open" id="toggle-icon"></i>
+      </div>
+    </div>
+    <div class="readiness-body" id="readiness-body">
+      <div class="readiness-cats">
+        <div class="readiness-cat">
+          <div class="readiness-cat-title"><i class="fas fa-circle-check" style="color:#16a34a"></i> Bookings</div>
+          <div class="readiness-items">
+            <label class="readiness-item"><input type="checkbox" {% if booking and booking.hotel_conf %}checked{% endif %} onchange="updateProgress()"><span>Hotel reserved</span>{% if booking and booking.hotel_conf %}<span class="ri-tag ri-done">Done</span>{% else %}<span class="ri-tag ri-crit">Critical</span>{% endif %}</label>
+            <label class="readiness-item"><input type="checkbox" {% if booking and booking.car_conf %}checked{% endif %} onchange="updateProgress()"><span>Car rental confirmed</span>{% if booking and booking.car_conf %}<span class="ri-tag ri-done">Done</span>{% else %}<span class="ri-tag ri-crit">Critical</span>{% endif %}</label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Hotel conf # saved</span><span class="ri-tag ri-crit">Critical</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Cancel deadline noted</span><span class="ri-tag ri-crit">Critical</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Entry fees paid</span></label>
+          </div>
+        </div>
+        <div class="readiness-cat">
+          <div class="readiness-cat-title"><i class="fas fa-car" style="color:#2563eb"></i> Travel Prep</div>
+          <div class="readiness-items">
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Check road / CalTrans conditions</span><span class="ri-tag ri-crit">Critical</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Gas up the car</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Snacks &amp; drinks packed</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Car charger &amp; phone mount</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Download offline maps</span><span class="ri-tag ri-opt">Optional</span></label>
+          </div>
+        </div>
+        <div class="readiness-cat">
+          <div class="readiness-cat-title"><i class="fas fa-volleyball" style="color:#d97706"></i> Player Gear</div>
+          <div class="readiness-items">
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Full uniform (2 sets)</span><span class="ri-tag ri-crit">Critical</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>2 pairs of court shoes</span><span class="ri-tag ri-crit">Critical</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Kneepads</span><span class="ri-tag ri-crit">Critical</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Water bottle (filled)</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Athletic tape / first aid</span></label>
+          </div>
+        </div>
+        <div class="readiness-cat">
+          <div class="readiness-cat-title"><i class="fas fa-bag-shopping" style="color:#7c3aed"></i> Parent Essentials</div>
+          <div class="readiness-items">
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Folding chairs / bleacher cushion</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Cash for food &amp; parking</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Sunscreen &amp; layers</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Phone charger / power bank</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>AES app / bracket ready</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>WhatsApp notifications on</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Team snack contribution</span><span class="ri-tag ri-opt">Optional</span></label>
+          </div>
+        </div>
+      </div>
+      <div class="readiness-done" id="all-done" style="display:none">
+        <i class="fas fa-circle-check"></i>
+        You're all set for {{ tournament.event }}! Have a great tournament!
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── TWO-COLUMN LAYOUT ────────────────────────────────────────── #}
+  <div class="detail-layout">
+  <div class="detail-main">
+
+    {# ── TRAVEL CURTAIN — always-visible header, body opens on travel day ── #}
+    <div class="travel-curtain" id="travel-curtain">
+      {# Always-visible strip: dates + stats + pull handle #}
+      <div class="travel-info-bar">
+        <div class="travel-row-1">
+          <div class="travel-item"><i class="fas fa-calendar-days"></i><span>{{ tournament.dates_display }}</span></div>
+          <div class="travel-item"><i class="fas fa-clock"></i><span>{{ day_count }} day{{ 's' if day_count != 1 else '' }}</span></div>
+          {% if distance is not none %}
+          <div class="travel-item"><i class="fas fa-road"></i><span>{{ distance }} miles</span></div>
+          {% endif %}
+          {% if drive_time %}
+          <div class="travel-item"><i class="fas fa-car"></i><span>{{ drive_time }}</span></div>
+          {% endif %}
+        </div>
+        {# Pull handle — always visible, opens curtain #}
+        {% if distance is not none %}
+        <div class="travel-pull-handle" onclick="toggleTravelCurtain()" id="travel-handle">
+          <span id="travel-handle-label">
+            {% if is_travel_day %}<i class="fas fa-bolt" style="color:#f59e0b"></i> It's Travel Day — Route &amp; Details Open{% else %}<i class="fas fa-chevron-down" id="travel-chevron"></i> Route, Weather &amp; Timeline{% endif %}
+          </span>
+          {% if not is_travel_day %}<i class="fas fa-chevron-down" id="travel-chevron"></i>{% endif %}
+        </div>
+        {% endif %}
+      </div>
+
+      {# Curtain body — hidden unless travel day #}
+      <div class="travel-curtain-body {% if is_travel_day %}open{% endif %}" id="travel-curtain-body">
+
+        {# Route + nav #}
+        <div class="travel-row-2">
+          <div class="travel-route">
+            <div class="travel-route-from">
+              <strong>{{ home_address }}</strong>
+              Departing {{ timeline_days[0].date if timeline_days else 'Travel Day' }}
+            </div>
+            <div class="travel-route-arrow"><i class="fas fa-arrow-right"></i></div>
+            <div class="travel-route-to">
+              <strong>{{ tournament.venue }}</strong>
+              {{ tournament.city }}
+            </div>
+          </div>
+          <div class="travel-route-divider"></div>
+          <a class="nav-btn nav-btn-gmaps" href="{{ gmaps_url }}" target="_blank" rel="noopener">
+            <i class="fab fa-google"></i> Google Maps
+          </a>
+          <a class="nav-btn nav-btn-waze" href="{{ waze_url }}" target="_blank" rel="noopener">
+            <i class="fas fa-diamond-turn-right"></i> Waze
+          </a>
+        </div>
+
+        {# Timeline #}
+        {% if timeline_days %}
+        <div class="timeline-section" style="margin-top:0.75rem">
+          <h3><i class="fas fa-calendar-days"></i> Trip Timeline</h3>
+          <div class="timeline-row">
+            {% for day in timeline_days %}
+            <div class="timeline-item timeline-{{ day.color }}">
+              <div class="timeline-icon"><i class="fas fa-{{ day.icon }}"></i></div>
+              <div class="timeline-date">{{ day.date }}</div>
+              <div class="timeline-label">{{ day.label }}</div>
             </div>
             {% endfor %}
-        </div>
-        {% elif weather.type == 'historical_avg' %}
-        <div class="weather-notice">
-            <i class="fas fa-info-circle"></i> {{ weather.message }}
-        </div>
-        {% elif weather.type == 'past' %}
-        <div class="weather-notice">
-            <i class="fas fa-clock-rotate-left"></i> {{ weather.message }}
+          </div>
         </div>
         {% endif %}
+
+        {# Weather #}
+        {% if weather %}
+        <div class="detail-card" style="margin-top:0.75rem">
+          <h3><i class="fas fa-cloud-sun"></i> Weather Forecast</h3>
+          {% if weather.type == 'forecast' and weather.days %}
+          <div class="weather-grid-small">
+            {% for day in weather.days %}
+            <div class="weather-day">
+              <div class="weather-date-sm">{{ day.date }}</div>
+              <i class="fas fa-{{ weather_icon(day.weather_code) }} weather-icon-sm"></i>
+              <div class="weather-desc-sm">{{ weather_desc(day.weather_code) }}</div>
+              <div class="weather-temps-sm">
+                <span class="temp-hi"><i class="fas fa-arrow-up"></i>{{ day.high|round|int }}°</span>
+                <span class="temp-lo"><i class="fas fa-arrow-down"></i>{{ day.low|round|int }}°</span>
+              </div>
+              {% if day.precip_chance is not none %}
+              <div class="weather-precip-sm"><i class="fas fa-droplet"></i> {{ day.precip_chance }}%</div>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          {% elif weather.type == 'historical_avg' %}
+          <p class="weather-notice"><i class="fas fa-info-circle"></i> {{ weather.message }}</p>
+          {% elif weather.type == 'past' %}
+          <p class="weather-notice"><i class="fas fa-clock-rotate-left"></i> {{ weather.message }}</p>
+          {% endif %}
+          <div class="weather-links">
+            <a href="https://www.accuweather.com/en/search-locations?query={{ tournament.city | urlencode }}" target="_blank" rel="noopener" class="map-link">
+              <i class="fas fa-temperature-half"></i> AccuWeather
+            </a>
+            <a href="https://roads.dot.ca.gov/" target="_blank" rel="noopener" class="map-link">
+              <i class="fas fa-road"></i> CalTrans Road Conditions
+            </a>
+          </div>
+        </div>
+        {% endif %}
+
+        {# Road trip tabs #}
+        {% if distance is not none and distance > 50 %}
+        <div class="roadtrip-card" style="margin-top:0.75rem">
+          <div class="roadtrip-tabs">
+            <div class="roadtrip-tab active" onclick="switchTab('road')"><i class="fas fa-car"></i> On the Road</div>
+            <div class="roadtrip-tab" onclick="switchTab('dest')"><i class="fas fa-location-dot"></i> In {{ tournament.city.split(',')[0] }}</div>
+          </div>
+          <div class="roadtrip-pane active" id="pane-road">
+            <p class="roadtrip-placeholder"><i class="fas fa-route"></i> Road stops and points of interest along the way to {{ tournament.city }} will appear here. <a href="{{ url_for('trip_booking', tournament_id=tournament.id) }}">Add travel notes</a> to customize.</p>
+          </div>
+          <div class="roadtrip-pane" id="pane-dest">
+            <p class="roadtrip-placeholder"><i class="fas fa-map-pin"></i> Local restaurants, big box stores, and fun facts about {{ tournament.city.split(',')[0] }} will appear here. <a href="{{ url_for('trip_booking', tournament_id=tournament.id) }}">Add destination notes</a>.</p>
+          </div>
+        </div>
+        {% endif %}
+
+      </div>{# /travel-curtain-body #}
+    </div>{# /travel-curtain #}
+
+    {# ── COUNTDOWN ───────────────────────────────────────────────── #}
+    {% if days_until is not none and days_until >= 0 and not tournament.is_cancelled %}
+    <div class="countdown-banner">
+      <i class="fas fa-hourglass-half"></i>
+      {% if days_until == 0 %}
+        <strong>Today!</strong><span>Tournament starts today</span>
+      {% elif days_until == 1 %}
+        <strong>Tomorrow!</strong><span>Tournament starts {{ tournament.date_start.strftime('%A, %B %-d') }}</span>
+      {% else %}
+        <strong>{{ days_until }} days away!</strong><span>Tournament starts {{ tournament.date_start.strftime('%A, %B %-d') }}</span>
+      {% endif %}
     </div>
     {% endif %}
 
-    <div class="detail-grid">
-        <div class="detail-card">
-            <h3><i class="fas fa-location-dot"></i> City</h3>
-            <p>{{ tournament.city }}</p>
+    {# ── HOTEL + CAR BOOKING ─────────────────────────────────────── #}
+    {% if booking and (booking.hotel_name or booking.car_company) %}
+    <div class="booking-pair">
+      {% if booking.hotel_name %}
+      <div class="detail-card">
+        <h3><i class="fas fa-hotel"></i> Hotel</h3>
+        <div class="booking-name">{{ booking.hotel_name }}</div>
+        {% if booking.hotel_address %}<div class="booking-detail"><i class="fas fa-location-dot"></i> {{ booking.hotel_address }}</div>{% endif %}
+        {% if booking.hotel_phone %}<div class="booking-detail"><i class="fas fa-phone"></i> <a href="tel:{{ booking.hotel_phone }}">{{ booking.hotel_phone }}</a></div>{% endif %}
+        {% if booking.hotel_checkin %}<div class="booking-row"><span class="booking-key">Check-in</span><span>{{ booking.hotel_checkin }}</span></div>{% endif %}
+        {% if booking.hotel_checkout %}<div class="booking-row"><span class="booking-key">Check-out</span><span>{{ booking.hotel_checkout }}</span></div>{% endif %}
+        {% if booking.hotel_conf %}<div class="booking-row"><span class="booking-key">Conf #</span><span class="booking-conf">{{ booking.hotel_conf }}{% if booking.hotel_pin %} · PIN: {{ booking.hotel_pin }}{% endif %}</span></div>{% endif %}
+        {% if booking.hotel_priceline %}<div class="booking-row"><span class="booking-key">Priceline #</span><span class="booking-conf">{{ booking.hotel_priceline }}</span></div>{% endif %}
+        {% if booking.hotel_perks %}
+        <div class="booking-perks">
+          {% for perk in booking.hotel_perks.split(',') %}
+          <span class="perk-badge"><i class="fas fa-check"></i> {{ perk.strip() }}</span>
+          {% endfor %}
         </div>
-        <div class="detail-card">
-            <h3><i class="fas fa-building"></i> Venue</h3>
-            <p>{{ tournament.venue }}</p>
-        </div>
-        <div class="detail-card">
-            <h3><i class="fas fa-hotel"></i> Hotel Recommendation</h3>
-            <p>{{ tournament.hotel_recommendation or 'None' }}</p>
-        </div>
-        <div class="detail-card">
-            <h3><i class="fas fa-link"></i> Hotel Link / Notes</h3>
-            <p>{{ tournament.hotel_link_notes or 'None' }}</p>
-        </div>
-        <div class="detail-card">
-            <h3><i class="fas fa-car-side"></i> Car Rental Recommendation</h3>
-            <p>{{ tournament.car_rental_recommendation or 'None' }}</p>
-        </div>
-        <div class="detail-card">
-            <h3><i class="fas fa-circle-check"></i> Hotel Booking Status</h3>
-            {% if tournament.hotel_booking_status %}
-                <span class="status-tag status-{{ tournament.hotel_booking_status|lower|replace(' ', '-') }}">{{ tournament.hotel_booking_status }}</span>
-            {% else %}
-                <p>Not set</p>
-            {% endif %}
-        </div>
-        <div class="detail-card">
-            <h3><i class="fas fa-circle-check"></i> Car Booking Status</h3>
-            {% if tournament.car_booking_status %}
-                <span class="status-tag status-{{ tournament.car_booking_status|lower|replace(' ', '-') }}">{{ tournament.car_booking_status }}</span>
-            {% else %}
-                <p>Not set</p>
-            {% endif %}
-        </div>
-        <div class="detail-card full-width">
-            <h3><i class="fas fa-sticky-note"></i> Notes / Status</h3>
-            <p>{{ tournament.notes or 'No notes' }}</p>
-        </div>
-    </div>
-
-    <div class="resource-links">
-        <h2><i class="fas fa-link"></i> Useful Links</h2>
-        <div class="links-grid">
-            <a href="https://www.ncva.com/events" target="_blank" rel="noopener" class="resource-card">
-                <i class="fas fa-volleyball"></i>
-                <span>NCVA Events & Schedule</span>
-            </a>
-            <a href="https://www.ncva.com/news" target="_blank" rel="noopener" class="resource-card">
-                <i class="fas fa-newspaper"></i>
-                <span>NCVA News</span>
-            </a>
-            <a href="{{ team_info.power_league_url }}" target="_blank" rel="noopener" class="resource-card">
-                <i class="fas fa-table"></i>
-                <span>15s Power League Standings</span>
-            </a>
-            <a href="{{ team_info.ncva_points_url }}" target="_blank" rel="noopener" class="resource-card">
-                <i class="fas fa-trophy"></i>
-                <span>All Power League Points</span>
-            </a>
-            <a href="https://www.google.com/maps/search/{{ tournament.venue }},+{{ tournament.city }}" target="_blank" rel="noopener" class="resource-card">
-                <i class="fas fa-map"></i>
-                <span>View Venue on Map</span>
-            </a>
-            <a href="https://chat.whatsapp.com" target="_blank" rel="noopener" class="resource-card resource-card-whatsapp">
-                <i class="fab fa-whatsapp"></i>
-                <span>Parents WhatsApp Group</span>
-            </a>
-        </div>
-    </div>
-
-    <div class="checklist-link-section">
-        <a href="{{ url_for('tournament_checklist', tournament_id=tournament.id) }}" class="checklist-link">
-            <i class="fas fa-clipboard-check"></i> Travel Checklist
-        </a>
-    </div>
-
-    <div class="detail-actions">
-        <a href="{{ url_for('edit_tournament', tournament_id=tournament.id) }}" class="btn btn-primary">Edit</a>
-        {% if not tournament.is_cancelled %}
-        <button type="button" class="btn btn-cancel" onclick="document.getElementById('cancelModal').style.display='flex'">
-            <i class="fas fa-ban"></i> Cancel Tournament
-        </button>
         {% endif %}
-        <form action="{{ url_for('delete_tournament', tournament_id=tournament.id) }}" method="POST" class="inline-form" onsubmit="return confirm('Are you sure you want to permanently delete this tournament?');">
-            <button type="submit" class="btn btn-danger">Delete</button>
-        </form>
+        {% if booking.hotel_cancel_deadline %}<div class="booking-cancel"><i class="fas fa-clock"></i> Cancel by: {{ booking.hotel_cancel_deadline }}</div>{% endif %}
+      </div>
+      {% else %}
+      <div class="detail-card booking-empty">
+        <h3><i class="fas fa-hotel"></i> Hotel</h3>
+        <p class="booking-empty-msg">No hotel booking added yet.</p>
+        <a href="{{ url_for('trip_booking', tournament_id=tournament.id) }}" class="btn btn-sm">+ Add Hotel Details</a>
+      </div>
+      {% endif %}
+
+      {% if booking.car_company %}
+      <div class="detail-card">
+        <h3><i class="fas fa-car"></i> Rental Car</h3>
+        <div class="booking-name">{{ booking.car_company }}{% if booking.car_type %} – {{ booking.car_type }}{% endif %}</div>
+        {% if booking.car_models %}<div class="booking-detail"><i class="fas fa-car-side"></i> {{ booking.car_models }}</div>{% endif %}
+        {% if booking.car_location %}<div class="booking-detail"><i class="fas fa-location-dot"></i> {{ booking.car_location }}</div>{% endif %}
+        {% if booking.car_pickup %}<div class="booking-row"><span class="booking-key">Pick-up</span><span>{{ booking.car_pickup }}</span></div>{% endif %}
+        {% if booking.car_dropoff %}<div class="booking-row"><span class="booking-key">Drop-off</span><span>{{ booking.car_dropoff }}</span></div>{% endif %}
+        {% if booking.car_total %}<div class="booking-row"><span class="booking-key">Total</span><span class="booking-conf">{{ booking.car_total }}</span></div>{% endif %}
+        {% if booking.car_conf %}<div class="booking-row"><span class="booking-key">Conf #</span><span class="booking-conf">{{ booking.car_conf }}</span></div>{% endif %}
+        {% if booking.car_perks %}
+        <div class="booking-perks">
+          {% for perk in booking.car_perks.split(',') %}
+          <span class="perk-badge"><i class="fas fa-check"></i> {{ perk.strip() }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% if booking.car_notes %}<div class="booking-cancel"><i class="fas fa-info-circle"></i> {{ booking.car_notes }}</div>{% endif %}
+      </div>
+      {% else %}
+      <div class="detail-card booking-empty">
+        <h3><i class="fas fa-car"></i> Rental Car</h3>
+        <p class="booking-empty-msg">No car rental added yet.</p>
+        <a href="{{ url_for('trip_booking', tournament_id=tournament.id) }}" class="btn btn-sm">+ Add Car Details</a>
+      </div>
+      {% endif %}
     </div>
+
+    {# ── CONFIRMATION NUMBERS SUMMARY ──────────────────────────── #}
+    {% if booking.hotel_conf or booking.car_conf %}
+    <div class="detail-card conf-summary">
+      <h3><i class="fas fa-hashtag"></i> Confirmation Numbers</h3>
+      <div class="conf-grid">
+        {% if booking.hotel_conf %}<div class="conf-item"><span class="conf-key">Hotel conf #</span><span class="conf-val">{{ booking.hotel_conf }}{% if booking.hotel_pin %} · PIN {{ booking.hotel_pin }}{% endif %}</span></div>{% endif %}
+        {% if booking.hotel_priceline %}<div class="conf-item"><span class="conf-key">Priceline #</span><span class="conf-val">{{ booking.hotel_priceline }}</span></div>{% endif %}
+        {% if booking.car_conf %}<div class="conf-item"><span class="conf-key">Car rental conf #</span><span class="conf-val">{{ booking.car_conf }}</span></div>{% endif %}
+        {% if booking.hotel_phone %}<div class="conf-item"><span class="conf-key">Hotel phone</span><span class="conf-val"><a href="tel:{{ booking.hotel_phone }}" style="color:inherit">{{ booking.hotel_phone }}</a></span></div>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    {# No booking yet — show add prompt #}
+    <div class="detail-card booking-cta">
+      <i class="fas fa-suitcase-rolling booking-cta-icon"></i>
+      <div>
+        <strong>No trip booking details yet</strong>
+        <p>Add hotel, car rental, and travel notes to get the full trip dashboard.</p>
+      </div>
+      <a href="{{ url_for('trip_booking', tournament_id=tournament.id) }}" class="btn btn-primary">+ Add Booking Details</a>
+    </div>
+    {% endif %}
+
+    {# ── PARKING + FOOD NOTES ─────────────────────────────────── #}
+    {% if booking and (booking.parking_tips or booking.food_notes) %}
+    <div class="notes-row">
+      {% if booking.parking_tips %}
+      <div class="detail-card"><h3><i class="fas fa-square-parking"></i> Parking Tips</h3><p class="notes-text">{{ booking.parking_tips }}</p></div>
+      {% endif %}
+      {% if booking.food_notes %}
+      <div class="detail-card"><h3><i class="fas fa-utensils"></i> Food Notes</h3><p class="notes-text">{{ booking.food_notes }}</p></div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {# ── TOURNAMENT DETAILS ───────────────────────────────────── #}
+    <div class="detail-grid">
+      <div class="detail-card">
+        <h3><i class="fas fa-location-dot"></i> City</h3>
+        <p>{{ tournament.city }}</p>
+      </div>
+      <div class="detail-card">
+        <h3><i class="fas fa-building"></i> Venue</h3>
+        <p>{{ tournament.venue }}</p>
+      </div>
+      {% if tournament.notes %}
+      <div class="detail-card full-width">
+        <h3><i class="fas fa-sticky-note"></i> Notes / Status</h3>
+        <p>{{ tournament.notes }}</p>
+      </div>
+      {% endif %}
+    </div>
+
+    {# ── ACTIONS ─────────────────────────────────────────────── #}
+    <div class="checklist-link-section">
+      <a href="{{ url_for('trip_booking', tournament_id=tournament.id) }}" class="checklist-link">
+        <i class="fas fa-pencil"></i> {% if booking %}Edit Booking Details{% else %}Add Booking Details{% endif %}
+      </a>
+    </div>
+    <div class="detail-actions">
+      <a href="{{ url_for('edit_tournament', tournament_id=tournament.id) }}" class="btn btn-primary">Edit</a>
+      {% if not tournament.is_cancelled %}
+      <button type="button" class="btn btn-cancel" onclick="document.getElementById('cancelModal').style.display='flex'">
+        <i class="fas fa-ban"></i> Cancel Tournament
+      </button>
+      {% endif %}
+      <form action="{{ url_for('delete_tournament', tournament_id=tournament.id) }}" method="POST" class="inline-form" onsubmit="return confirm('Are you sure you want to permanently delete this tournament?');">
+        <button type="submit" class="btn btn-danger">Delete</button>
+      </form>
+    </div>
+
+  </div>{# /detail-main #}
+
+  {# ── SIDEBAR ─────────────────────────────────────────────────── #}
+  <div class="detail-sidebar">
+    {# Pinned Announcements — shown if booking has coach notes #}
+    {% if booking and booking.coach_notes %}
+    <div class="side-panel">
+      <div class="side-panel-header">
+        <h3><i class="fas fa-whistle"></i> Coach Notes</h3>
+      </div>
+      <div class="side-panel-body">
+        <p class="side-panel-text">{{ booking.coach_notes }}</p>
+      </div>
+    </div>
+    {% endif %}
+
+    {% set pinned = tournament.announcements | selectattr('is_pinned') | list %}
+    {% set recent = tournament.announcements | rejectattr('is_pinned') | list %}
+    <div class="side-panel">
+      <div class="side-panel-header">
+        <h3><i class="fab fa-whatsapp side-panel-wa"></i> Announcements</h3>
+        <a href="{{ url_for('import_announcements', tournament_id=tournament.id) }}" class="side-panel-import-btn" title="Import from WhatsApp">
+          <i class="fas fa-wand-magic-sparkles"></i>
+        </a>
+      </div>
+      {% if pinned or recent %}
+        {% if pinned %}
+        <div class="side-ann-section-label">📌 Pinned</div>
+        {% for ann in pinned %}
+        <div class="side-ann-item side-ann-pinned">
+          <div class="side-ann-meta">
+            {% if ann.author %}<span class="side-ann-author">{{ ann.author }}</span>{% endif %}
+            <span class="side-ann-date">{{ ann.source_date }}</span>
+          </div>
+          <div class="side-ann-text">{{ ann.text }}</div>
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% if recent %}
+        <div class="side-ann-section-label">🕐 Recent</div>
+        {% for ann in recent[:3] %}
+        <div class="side-ann-item">
+          <div class="side-ann-meta">
+            {% if ann.author %}<span class="side-ann-author">{{ ann.author }}</span>{% endif %}
+            <span class="side-ann-date">{{ ann.source_date }}</span>
+          </div>
+          <div class="side-ann-text">{{ ann.text }}</div>
+        </div>
+        {% endfor %}
+        {% endif %}
+        <div style="padding:0.5rem 1rem">
+          <a href="{{ url_for('import_announcements', tournament_id=tournament.id) }}" class="btn btn-sm" style="width:100%;text-align:center;display:block">
+            <i class="fas fa-wand-magic-sparkles"></i> Manage &amp; Import
+          </a>
+        </div>
+      {% else %}
+      <div class="side-panel-body side-panel-placeholder">
+        <i class="fab fa-whatsapp" style="font-size:1.5rem;color:#25d366;margin-bottom:0.5rem"></i>
+        <p>Paste your WhatsApp chat and Claude will extract the key announcements.</p>
+        <a href="{{ url_for('import_announcements', tournament_id=tournament.id) }}" class="btn btn-sm" style="margin-top:0.5rem">
+          <i class="fas fa-wand-magic-sparkles"></i> Import with AI
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </div>{# /detail-sidebar #}
+
+  </div>{# /detail-layout #}
+</div>{# /detail-page #}
+
+{# ── CANCEL MODAL ─────────────────────────────────────────────── #}
+<div id="cancelModal" class="modal-overlay" style="display:none;">
+  <div class="modal-box">
+    <h2><i class="fas fa-ban"></i> Cancel Tournament</h2>
+    <p>Mark <strong>{{ tournament.event }}</strong> as cancelled? You can restore it later.</p>
+    <form action="{{ url_for('cancel_tournament', tournament_id=tournament.id) }}" method="POST">
+      <div class="form-group">
+        <label for="reason_select">Reason for cancellation</label>
+        <select id="reason_select" onchange="var o=this.options[this.selectedIndex].value; document.getElementById('cancellation_reason').value=o; if(o==='Other'){document.getElementById('cancellation_reason').value='';document.getElementById('cancellation_reason').focus();}">
+          <option value="NCVA schedule change">NCVA schedule change</option>
+          <option value="NCVA reschedule - new date TBD">NCVA reschedule - new date TBD</option>
+          <option value="Venue change / unavailable">Venue change / unavailable</option>
+          <option value="Weather cancellation">Weather cancellation</option>
+          <option value="Team conflict / schedule overlap">Team conflict / schedule overlap</option>
+          <option value="Other">Other (type below)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="cancellation_reason">Details</label>
+        <textarea id="cancellation_reason" name="cancellation_reason" rows="2" placeholder="Add any extra details...">NCVA schedule change</textarea>
+      </div>
+      <div class="modal-actions">
+        <button type="submit" class="btn btn-cancel"><i class="fas fa-ban"></i> Confirm Cancellation</button>
+        <button type="button" class="btn" onclick="document.getElementById('cancelModal').style.display='none'">Go Back</button>
+      </div>
+    </form>
+  </div>
 </div>
 
-<div id="cancelModal" class="modal-overlay" style="display:none;">
-    <div class="modal-box">
-        <h2><i class="fas fa-ban"></i> Cancel Tournament</h2>
-        <p>Mark <strong>{{ tournament.event }}</strong> as cancelled? You can restore it later if the schedule changes back.</p>
-        <form action="{{ url_for('cancel_tournament', tournament_id=tournament.id) }}" method="POST">
-            <div class="form-group">
-                <label for="cancellation_reason">Reason for cancellation</label>
-                <select id="reason_select" onchange="var o=this.options[this.selectedIndex].value; document.getElementById('cancellation_reason').value=o; if(o==='Other'){document.getElementById('cancellation_reason').value='';document.getElementById('cancellation_reason').focus();}">
-                    <option value="NCVA schedule change">NCVA schedule change</option>
-                    <option value="NCVA reschedule - new date TBD">NCVA reschedule - new date TBD</option>
-                    <option value="Venue change / unavailable">Venue change / unavailable</option>
-                    <option value="Weather cancellation">Weather cancellation</option>
-                    <option value="Team conflict / schedule overlap">Team conflict / schedule overlap</option>
-                    <option value="Other">Other (type below)</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="cancellation_reason">Details</label>
-                <textarea id="cancellation_reason" name="cancellation_reason" rows="2" placeholder="Add any extra details...">NCVA schedule change</textarea>
-            </div>
-            <div class="modal-actions">
-                <button type="submit" class="btn btn-cancel"><i class="fas fa-ban"></i> Confirm Cancellation</button>
-                <button type="button" class="btn" onclick="document.getElementById('cancelModal').style.display='none'">Go Back</button>
-            </div>
-        </form>
-    </div>
-</div>
+<script>
+const RI_TOTAL = 22;
+function updateProgress() {
+  const boxes = document.querySelectorAll('.readiness-item input[type=checkbox]');
+  const checked = [...boxes].filter(b => b.checked).length;
+  const pct = Math.round(checked / RI_TOTAL * 100);
+  const scoreEl = document.getElementById('score-text');
+  const fillEl = document.getElementById('progress-fill');
+  if (scoreEl) scoreEl.textContent = checked + ' / ' + RI_TOTAL + ' complete';
+  if (fillEl) fillEl.style.width = pct + '%';
+  boxes.forEach(b => b.closest('.readiness-item').classList.toggle('ri-checked', b.checked));
+  const doneEl = document.getElementById('all-done');
+  if (doneEl) doneEl.style.display = checked === RI_TOTAL ? 'flex' : 'none';
+}
+function toggleReadiness() {
+  const body = document.getElementById('readiness-body');
+  const icon = document.getElementById('toggle-icon');
+  if (!body) return;
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  icon.classList.toggle('open', !open);
+}
+function toggleTravelCurtain() {
+  const body = document.getElementById('travel-curtain-body');
+  const chevron = document.getElementById('travel-chevron');
+  if (!body) return;
+  const open = body.classList.toggle('open');
+  if (chevron) chevron.classList.toggle('open', open);
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.roadtrip-tab').forEach((t, i) => {
+    t.classList.toggle('active', ['road','dest'][i] === tab);
+  });
+  document.querySelectorAll('.roadtrip-pane').forEach(p => p.classList.remove('active'));
+  const pane = document.getElementById('pane-' + tab);
+  if (pane) pane.classList.add('active');
+}
+if (document.getElementById('score-text')) updateProgress();
+</script>
 {% endblock %}

@@ -1,11 +1,27 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="auto" data-font-size="md" data-contrast="normal">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Tournament Tracker{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script>
+    // Apply preferences before first paint to avoid flash
+    (function() {
+        var theme    = localStorage.getItem('tt-theme')    || 'auto';
+        var font     = localStorage.getItem('tt-font')     || 'md';
+        var contrast = localStorage.getItem('tt-contrast') === '1';
+        var html = document.documentElement;
+        if (theme === 'auto') {
+            html.dataset.theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        } else {
+            html.dataset.theme = theme;
+        }
+        html.dataset.fontSize = font;
+        html.dataset.contrast = contrast ? 'high' : 'normal';
+    })();
+    </script>
 </head>
 <body>
     <nav>
@@ -22,9 +38,7 @@
                     {% if current_user.profile_image_url %}
                     <img src="{{ current_user.profile_image_url }}" alt="Profile" class="user-avatar">
                     {% else %}
-                    <div class="user-avatar-placeholder">
-                        <i class="fas fa-user"></i>
-                    </div>
+                    <div class="user-avatar-placeholder"><i class="fas fa-user"></i></div>
                     {% endif %}
                     <span class="user-name">{{ current_user.first_name or current_user.email or 'Parent' }}</span>
                     <a href="{{ url_for('replit_auth.logout') }}" class="btn btn-small btn-logout">Sign Out</a>
@@ -42,12 +56,324 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
-
         {% block content %}{% endblock %}
     </main>
 
     <footer>
         <p>{{ team_info.name }} | <a href="https://www.ncva.com" target="_blank" rel="noopener">NCVA</a> | <a href="{{ team_info.power_league_url }}" target="_blank" rel="noopener">Power League Standings</a></p>
     </footer>
+
+    {# ── Floating widget stack ── #}
+    <div class="float-stack">
+        <button class="float-btn float-settings-btn" id="settings-toggle-btn" title="Display settings" aria-label="Open display settings">
+            <i class="fas fa-sliders"></i>
+        </button>
+        <button class="float-btn float-chat-btn" id="chat-toggle-btn" title="VolleyAI Assistant" aria-label="Open VolleyAI chat">
+            <i class="fas fa-volleyball"></i>
+        </button>
+    </div>
+
+    {# ── Settings panel ── #}
+    <div class="settings-panel" id="settings-panel" role="dialog" aria-label="Display settings">
+        <div class="settings-panel-header">
+            <h3><i class="fas fa-sliders"></i> Display Settings</h3>
+            <button class="settings-close" id="settings-close-btn" aria-label="Close"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div class="settings-section">
+            <div class="settings-label">Theme</div>
+            <div class="settings-pills" role="group" aria-label="Theme">
+                <button class="settings-pill" data-setting="theme" data-value="light"><i class="fas fa-sun"></i> Light</button>
+                <button class="settings-pill" data-setting="theme" data-value="dark"><i class="fas fa-moon"></i> Dark</button>
+                <button class="settings-pill" data-setting="theme" data-value="auto"><i class="fas fa-circle-half-stroke"></i> Auto</button>
+            </div>
+        </div>
+        <div class="settings-section">
+            <div class="settings-label">Font Size</div>
+            <div class="settings-pills" role="group" aria-label="Font size">
+                <button class="settings-pill" data-setting="font" data-value="sm">S</button>
+                <button class="settings-pill" data-setting="font" data-value="md">M</button>
+                <button class="settings-pill" data-setting="font" data-value="lg">L</button>
+                <button class="settings-pill" data-setting="font" data-value="xl">XL</button>
+            </div>
+        </div>
+        <div class="settings-section">
+            <div class="settings-label">Accessibility</div>
+            <div class="settings-toggle">
+                <span class="toggle-label">High Contrast</span>
+                <button class="toggle-switch" id="contrast-toggle" role="switch" aria-checked="false"></button>
+            </div>
+        </div>
+    </div>
+
+    {# ── Chat overlay ── #}
+    <div class="chat-overlay" id="chat-overlay"></div>
+
+    {# ── Chat modal ── #}
+    <div class="chat-modal" id="chat-modal" role="dialog" aria-label="VolleyAI Assistant">
+        <div class="chat-header">
+            <div class="chat-avatar"><i class="fas fa-volleyball"></i></div>
+            <div class="chat-header-info">
+                <h3>VolleyAI Assistant</h3>
+                <p>Tournament planning &amp; prep</p>
+            </div>
+            <button class="chat-close" id="chat-close-btn" aria-label="Close chat"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-quick-btns" id="chat-quick-btns">
+            {% if chat_mode is defined and chat_mode == 'add_tournament' %}
+            <button class="chat-quick-btn" data-msg="I want to describe a tournament"><i class="fas fa-pen"></i> Describe it</button>
+            <button class="chat-quick-btn" data-msg="I have an announcement to paste"><i class="fas fa-paste"></i> Paste announcement</button>
+            <button class="chat-quick-btn" data-msg="Walk me through it step by step"><i class="fas fa-shoe-prints"></i> Step by step</button>
+            <button class="chat-quick-btn" data-msg="SHOW_FORM"><i class="fas fa-list"></i> Just show form</button>
+            {% else %}
+            <button class="chat-quick-btn" data-msg="Review my checklist status"><i class="fas fa-list-check"></i> Checklist</button>
+            <button class="chat-quick-btn" data-msg="Show hotel details and confirmation numbers"><i class="fas fa-hotel"></i> Hotel</button>
+            <button class="chat-quick-btn" data-msg="Driving directions and route tips"><i class="fas fa-location-dot"></i> Directions</button>
+            <button class="chat-quick-btn" data-msg="What is the tournament schedule?"><i class="fas fa-calendar"></i> Schedule</button>
+            <button class="chat-quick-btn" data-msg="What should I pack for this tournament?"><i class="fas fa-bag-shopping"></i> Packing</button>
+            <button class="chat-quick-btn" data-msg="What are good places to eat near the venue?"><i class="fas fa-utensils"></i> Food</button>
+            {% endif %}
+        </div>
+        <div class="chat-input-row">
+            <textarea class="chat-input" id="chat-input" placeholder="Ask about your tournament, travel, or team..." rows="1"></textarea>
+            <button class="chat-send-btn" id="chat-send-btn" aria-label="Send message"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <script>
+    // ── Theme / Font / Contrast system ──
+    const LS = { theme: 'tt-theme', font: 'tt-font', contrast: 'tt-contrast' };
+    const html = document.documentElement;
+
+    function applyTheme(val) {
+        var resolved = val;
+        if (val === 'auto') {
+            resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        html.dataset.theme = resolved;
+        localStorage.setItem(LS.theme, val);
+        updatePills('theme', val);
+    }
+    function applyFont(val) {
+        html.dataset.fontSize = val;
+        localStorage.setItem(LS.font, val);
+        updatePills('font', val);
+    }
+    function applyContrast(on) {
+        html.dataset.contrast = on ? 'high' : 'normal';
+        localStorage.setItem(LS.contrast, on ? '1' : '0');
+        var btn = document.getElementById('contrast-toggle');
+        if (btn) { btn.classList.toggle('on', on); btn.setAttribute('aria-checked', on ? 'true' : 'false'); }
+    }
+    function updatePills(setting, val) {
+        document.querySelectorAll('[data-setting="' + setting + '"]').forEach(function(p) {
+            p.classList.toggle('active', p.dataset.value === val);
+        });
+    }
+
+    // Init from localStorage (also sets pills to match saved state)
+    (function init() {
+        var theme    = localStorage.getItem(LS.theme)    || 'auto';
+        var font     = localStorage.getItem(LS.font)     || 'md';
+        var contrast = localStorage.getItem(LS.contrast) === '1';
+        updatePills('theme', theme);
+        updatePills('font', font);
+        applyContrast(contrast);
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
+            if (localStorage.getItem(LS.theme) === 'auto') applyTheme('auto');
+        });
+    })();
+
+    // Settings panel events
+    document.getElementById('settings-toggle-btn').addEventListener('click', function(e) {
+        e.stopPropagation();
+        document.getElementById('settings-panel').classList.toggle('open');
+    });
+    document.getElementById('settings-close-btn').addEventListener('click', function() {
+        document.getElementById('settings-panel').classList.remove('open');
+    });
+    document.querySelectorAll('[data-setting="theme"]').forEach(function(btn) {
+        btn.addEventListener('click', function() { applyTheme(btn.dataset.value); });
+    });
+    document.querySelectorAll('[data-setting="font"]').forEach(function(btn) {
+        btn.addEventListener('click', function() { applyFont(btn.dataset.value); });
+    });
+    document.getElementById('contrast-toggle').addEventListener('click', function() {
+        applyContrast(!this.classList.contains('on'));
+    });
+    document.addEventListener('click', function(e) {
+        var panel = document.getElementById('settings-panel');
+        var toggleBtn = document.getElementById('settings-toggle-btn');
+        if (panel && !panel.contains(e.target) && !toggleBtn.contains(e.target)) {
+            panel.classList.remove('open');
+        }
+    });
+
+    // ── VolleyAI Chat ──
+    var TOURNAMENT_ID   = {{ (tournament.id if tournament is defined and tournament else 0) | tojson }};
+    var TOURNAMENT_NAME = {{ (tournament.event if tournament is defined and tournament else '') | tojson }};
+    var AUTO_OPEN_CHAT  = {{ (auto_open_chat if auto_open_chat is defined else false) | tojson }};
+    var CHAT_MODE       = {{ (chat_mode if chat_mode is defined else '') | tojson }};
+    var chatHistory = [];
+    var chatOpen = false;
+
+    function openChat() {
+        document.getElementById('chat-modal').classList.add('open');
+        document.getElementById('chat-overlay').classList.add('open');
+        chatOpen = true;
+        if (chatHistory.length === 0) { sendGreeting(); }
+        setTimeout(function() { document.getElementById('chat-input').focus(); }, 400);
+    }
+    function closeChat() {
+        document.getElementById('chat-modal').classList.remove('open');
+        document.getElementById('chat-overlay').classList.remove('open');
+        chatOpen = false;
+    }
+
+    document.getElementById('chat-toggle-btn').addEventListener('click', function() {
+        chatOpen ? closeChat() : openChat();
+    });
+    document.getElementById('chat-close-btn').addEventListener('click', closeChat);
+    document.getElementById('chat-overlay').addEventListener('click', closeChat);
+
+    document.querySelectorAll('.chat-quick-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() { sendMessage(btn.dataset.msg); });
+    });
+    document.getElementById('chat-input').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    });
+    document.getElementById('chat-send-btn').addEventListener('click', function() { sendMessage(); });
+
+    function appendMessage(role, text) {
+        var msgs = document.getElementById('chat-messages');
+        var div = document.createElement('div');
+        div.className = 'chat-msg chat-msg-' + role;
+        if (role === 'ai') {
+            div.innerHTML = '<div class="chat-msg-icon"><i class="fas fa-volleyball"></i></div>' +
+                '<div class="chat-bubble chat-bubble-ai">' + formatMsg(text) + '</div>';
+        } else {
+            div.innerHTML = '<div class="chat-bubble chat-bubble-user">' + escapeHtml(text) + '</div>' +
+                '<div class="chat-msg-user-icon"><i class="fas fa-user"></i></div>';
+        }
+        msgs.appendChild(div);
+        msgs.scrollTop = msgs.scrollHeight;
+    }
+    function showTyping() {
+        var msgs = document.getElementById('chat-messages');
+        var div = document.createElement('div');
+        div.className = 'chat-msg chat-msg-ai'; div.id = 'chat-typing';
+        div.innerHTML = '<div class="chat-msg-icon"><i class="fas fa-volleyball"></i></div>' +
+            '<div class="chat-bubble chat-bubble-ai"><div class="chat-typing"><span></span><span></span><span></span></div></div>';
+        msgs.appendChild(div);
+        msgs.scrollTop = msgs.scrollHeight;
+    }
+    function hideTyping() { var t = document.getElementById('chat-typing'); if (t) t.remove(); }
+
+    function formatMsg(text) {
+        return text
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+            .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+            .replace(/\*(.+?)\*/g,'<em>$1</em>')
+            .replace(/^- (.+)$/gm,'• $1')
+            .replace(/\n/g,'<br>');
+    }
+    function escapeHtml(t) {
+        return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function sendGreeting() {
+        var greeting;
+        if (CHAT_MODE === 'add_tournament') {
+            greeting = 'Hi! Let\'s add a new tournament. Tell me about it — **event name, dates, city, and venue** — or paste an announcement and I\'ll extract everything automatically.';
+        } else if (TOURNAMENT_NAME) {
+            greeting = 'Hi! I\'m your VolleyAI assistant. I can help you prepare for **' + TOURNAMENT_NAME + '**. Ask me about hotel, schedule, packing, driving — anything about the trip!';
+        } else {
+            greeting = 'Hi! I\'m your VolleyAI assistant. I can help with tournament planning, packing, travel, and team info. What would you like to know?';
+        }
+        appendMessage('ai', greeting);
+    }
+
+    function fillTournamentForm(data) {
+        // Reveal add-page form wrapper if present
+        var landing = document.getElementById('add-landing');
+        var wrapper = document.getElementById('add-form-wrapper');
+        var badge   = document.getElementById('add-form-badge');
+        if (landing) landing.style.display = 'none';
+        if (wrapper) wrapper.style.display = 'block';
+        if (badge)   badge.style.display   = 'inline-flex';
+
+        var fields = ['event', 'date', 'dates_display', 'days', 'city', 'venue',
+                      'hotel_booking_status', 'car_booking_status', 'notes',
+                      'hotel_recommendation', 'hotel_link_notes', 'car_rental_recommendation'];
+        fields.forEach(function(field) {
+            if (data[field] !== undefined && data[field] !== null && data[field] !== '') {
+                var el = document.getElementById(field);
+                if (el) el.value = data[field];
+            }
+        });
+        var target = wrapper || document.querySelector('.tournament-form');
+        if (target) { setTimeout(function() { target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 400); }
+    }
+
+    async function sendMessage(overrideText) {
+        var input = document.getElementById('chat-input');
+        var text  = (overrideText || input.value).trim();
+        if (!text) return;
+
+        // "Just show form" shortcut — scroll to form without API call
+        if (text === 'SHOW_FORM') {
+            var form = document.querySelector('.tournament-form');
+            if (form) {
+                closeChat();
+                form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            return;
+        }
+
+        input.value = '';
+        input.style.height = 'auto';
+        appendMessage('user', text);
+        document.getElementById('chat-send-btn').disabled = true;
+        showTyping();
+        try {
+            var res = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: text,
+                    history: chatHistory,
+                    tournament_id: TOURNAMENT_ID || null,
+                    mode: CHAT_MODE || null,
+                })
+            });
+            var data = await res.json();
+            hideTyping();
+            var reply = data.response || 'Sorry, I had trouble with that. Try again!';
+            appendMessage('ai', reply);
+            chatHistory.push({ role: 'user', text: text });
+            chatHistory.push({ role: 'ai',   text: reply });
+            if (chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
+            if (data.fill_form) { fillTournamentForm(data.fill_form); }
+        } catch(err) {
+            hideTyping();
+            appendMessage('ai', 'Connection error — please try again.');
+        } finally {
+            document.getElementById('chat-send-btn').disabled = false;
+        }
+    }
+
+    // Auto-expand textarea
+    document.getElementById('chat-input').addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+    });
+
+    // Auto-open on detail page when no plan
+    if (AUTO_OPEN_CHAT) {
+        window.addEventListener('DOMContentLoaded', function() {
+            setTimeout(openChat, 900);
+        });
+    }
+    </script>
 </body>
 </html>

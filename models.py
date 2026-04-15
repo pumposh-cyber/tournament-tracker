@@ -1,8 +1,12 @@
-from datetime import datetime
-from app import db
-from flask_dance.consumer.storage.sqla import OAuthConsumerMixin
+from datetime import datetime, timedelta
+from app import db, IS_DEV
 from flask_login import UserMixin
 from sqlalchemy import UniqueConstraint
+
+try:
+    from flask_dance.consumer.storage.sqla import OAuthConsumerMixin
+except ImportError:
+    OAuthConsumerMixin = None
 
 
 class User(UserMixin, db.Model):
@@ -16,11 +20,12 @@ class User(UserMixin, db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
 
-class OAuth(OAuthConsumerMixin, db.Model):
-    user_id = db.Column(db.String, db.ForeignKey(User.id))
-    browser_session_key = db.Column(db.String, nullable=False)
-    user = db.relationship(User)
-    __table_args__ = (UniqueConstraint('user_id', 'browser_session_key', 'provider', name='uq_user_browser_session_key_provider'),)
+if OAuthConsumerMixin is not None:
+    class OAuth(OAuthConsumerMixin, db.Model):
+        user_id = db.Column(db.String, db.ForeignKey(User.id))
+        browser_session_key = db.Column(db.String, nullable=False)
+        user = db.relationship(User)
+        __table_args__ = (UniqueConstraint('user_id', 'browser_session_key', 'provider', name='uq_user_browser_session_key_provider'),)
 
 
 class Tournament(db.Model):
@@ -42,8 +47,15 @@ class Tournament(db.Model):
     cancellation_reason = db.Column(db.Text, default="")
 
     @property
+    def date_end(self):
+        """Compute the last day of the tournament based on days/dates_display."""
+        from utils import parse_day_count
+        day_count = parse_day_count(self.days, self.dates_display)
+        return self.date_start + timedelta(days=max(day_count - 1, 0))
+
+    @property
     def is_upcoming(self):
-        return self.date_start >= datetime.now()
+        return self.date_end >= datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
     @property
     def formatted_date(self):
@@ -104,3 +116,16 @@ class TripBooking(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
     tournament = db.relationship("Tournament", backref=db.backref("trip_booking", uselist=False, cascade="all, delete-orphan"))
+
+
+class TournamentAnnouncement(db.Model):
+    """Coach / admin announcements imported from WhatsApp via LLM."""
+    __tablename__ = "tournament_announcements"
+    id = db.Column(db.Integer, primary_key=True)
+    tournament_id = db.Column(db.Integer, db.ForeignKey("tournaments.id", ondelete="CASCADE"), nullable=False)
+    author = db.Column(db.String(100), default="")
+    text = db.Column(db.Text, nullable=False)
+    is_pinned = db.Column(db.Boolean, default=False)
+    source_date = db.Column(db.String(50), default="")
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    tournament = db.relationship("Tournament", backref=db.backref("announcements", lazy=True, cascade="all, delete-orphan"))

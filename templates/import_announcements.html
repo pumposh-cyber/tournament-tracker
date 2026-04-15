@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}Import Announcements — {{ tournament.event }}{% endblock %}
+{% block content %}
+<div class="ia-page">
+  <a href="{{ url_for('tournament_detail', tournament_id=tournament.id) }}" class="back-link">
+    <i class="fas fa-arrow-left"></i> Back to {{ tournament.event }}
+  </a>
+
+  <div class="ia-header">
+    <h1><i class="fab fa-whatsapp ia-wa-icon"></i> WhatsApp Announcements</h1>
+    <p class="ia-sub">Paste your WhatsApp group chat export. Claude will extract the key announcements automatically.</p>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+    <div class="flash flash-{{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {% if error %}
+  <div class="flash flash-error"><i class="fas fa-triangle-exclamation"></i> {{ error }}</div>
+  {% endif %}
+
+  {# ── PASTE & PARSE ── #}
+  {% if not extracted %}
+  <div class="ia-card">
+    <h2><i class="fas fa-paste"></i> Paste Chat Export</h2>
+    <p class="ia-hint">
+      In WhatsApp: open the group → ⋮ → More → Export chat → Without media → copy the text here.
+    </p>
+    <form method="POST">
+      <input type="hidden" name="action" value="parse">
+      <textarea name="whatsapp_text" class="ia-textarea" rows="14"
+        placeholder="[4/14/26, 8:12 AM] Coach Mike: Report time is 7:00 AM Friday at Gate 5. Wear full uniform.&#10;[4/12/26, 2:00 PM] UVAC Admin: AES bracket is live! We're in Pool B...&#10;..."></textarea>
+      <div class="ia-actions">
+        <button type="submit" class="btn btn-primary ia-parse-btn">
+          <i class="fas fa-wand-magic-sparkles"></i> Extract with Gemini AI
+        </button>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+
+  {# ── REVIEW EXTRACTED ── #}
+  {% if extracted %}
+  <div class="ia-card">
+    <div class="ia-extracted-header">
+      <h2><i class="fas fa-list-check"></i> Review — {{ extracted|length }} message{{ 's' if extracted|length != 1 else '' }} found</h2>
+      <p class="ia-hint">Pinned items (gold star) show at the top of the sidebar. Uncheck any you don't want to save.</p>
+    </div>
+    <form method="POST">
+      <input type="hidden" name="action" value="save">
+      <input type="hidden" name="items_json" id="items-json" value="">
+
+      <div class="ia-extracted-list" id="extracted-list">
+        {% for item in extracted %}
+        <div class="ia-extracted-item {% if item.pinned %}ia-pinned{% endif %}" data-index="{{ loop.index0 }}">
+          <div class="ia-item-check">
+            <input type="checkbox" class="ia-checkbox" checked id="chk-{{ loop.index0 }}">
+          </div>
+          <div class="ia-item-body">
+            <div class="ia-item-meta">
+              <span class="ia-author">{{ item.author or 'Unknown' }}</span>
+              <span class="ia-date">{{ item.date or '' }}</span>
+              {% if item.pinned %}
+              <span class="ia-pin-badge"><i class="fas fa-thumbtack"></i> Pinned</span>
+              {% endif %}
+            </div>
+            <p class="ia-item-text">{{ item.text }}</p>
+          </div>
+          <button type="button" class="ia-pin-toggle" onclick="togglePinned({{ loop.index0 }})" title="Toggle pinned">
+            <i class="fas fa-thumbtack {% if not item.pinned %}ia-pin-off{% endif %}"></i>
+          </button>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="ia-actions" style="margin-top:1.25rem">
+        <button type="submit" class="btn btn-primary" onclick="prepareJson()">
+          <i class="fas fa-floppy-disk"></i> Save Selected
+        </button>
+        <a href="{{ url_for('import_announcements', tournament_id=tournament.id) }}" class="btn">
+          <i class="fas fa-rotate-left"></i> Paste Again
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <script>
+  // Store extracted data for manipulation
+  const items = {{ extracted | tojson }};
+
+  function togglePinned(idx) {
+    items[idx].pinned = !items[idx].pinned;
+    const el = document.querySelector('[data-index="' + idx + '"]');
+    el.classList.toggle('ia-pinned', items[idx].pinned);
+    const icon = el.querySelector('.ia-pin-toggle i');
+    icon.classList.toggle('ia-pin-off', !items[idx].pinned);
+    const badge = el.querySelector('.ia-pin-badge');
+    if (items[idx].pinned && !badge) {
+      const meta = el.querySelector('.ia-item-meta');
+      const b = document.createElement('span');
+      b.className = 'ia-pin-badge';
+      b.innerHTML = '<i class="fas fa-thumbtack"></i> Pinned';
+      meta.appendChild(b);
+    } else if (!items[idx].pinned && badge) {
+      badge.remove();
+    }
+  }
+
+  function prepareJson() {
+    const checks = document.querySelectorAll('.ia-checkbox');
+    const selected = items.filter((_, i) => checks[i] && checks[i].checked);
+    document.getElementById('items-json').value = JSON.stringify(selected);
+  }
+  </script>
+  {% endif %}
+
+  {# ── EXISTING ANNOUNCEMENTS ── #}
+  {% if existing %}
+  <div class="ia-card">
+    <h2><i class="fas fa-clipboard-list"></i> Saved Announcements ({{ existing|length }})</h2>
+    <div class="ia-existing-list">
+      {% for ann in existing %}
+      <div class="ia-existing-item {% if ann.is_pinned %}ia-pinned{% endif %}">
+        <div class="ia-item-body">
+          <div class="ia-item-meta">
+            {% if ann.author %}<span class="ia-author">{{ ann.author }}</span>{% endif %}
+            {% if ann.source_date %}<span class="ia-date">{{ ann.source_date }}</span>{% endif %}
+            {% if ann.is_pinned %}<span class="ia-pin-badge"><i class="fas fa-thumbtack"></i> Pinned</span>{% endif %}
+          </div>
+          <p class="ia-item-text">{{ ann.text }}</p>
+        </div>
+        <div class="ia-existing-actions">
+          <form method="POST" action="{{ url_for('toggle_pin_announcement', tournament_id=tournament.id, ann_id=ann.id) }}" style="display:inline">
+            <button class="ia-icon-btn" title="Toggle pin"><i class="fas fa-thumbtack {% if not ann.is_pinned %}ia-pin-off{% endif %}"></i></button>
+          </form>
+          <form method="POST" action="{{ url_for('delete_announcement', tournament_id=tournament.id, ann_id=ann.id) }}" style="display:inline" onsubmit="return confirm('Delete this announcement?')">
+            <button class="ia-icon-btn ia-icon-btn-del" title="Delete"><i class="fas fa-trash"></i></button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+<style>
+.ia-page { max-width: 760px; }
+.ia-header { margin-bottom: 1.5rem; }
+.ia-header h1 { font-size: 1.6rem; display: flex; align-items: center; gap: 0.5rem; }
+.ia-wa-icon { color: #25d366; }
+.ia-sub { color: #6b7280; margin-top: 0.3rem; font-size: 0.95rem; }
+.ia-card { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); padding: 1.5rem; margin-bottom: 1.25rem; }
+.ia-card h2 { font-size: 1.05rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; }
+.ia-hint { font-size: 0.85rem; color: #6b7280; margin-bottom: 0.75rem; line-height: 1.5; }
+.ia-textarea { width: 100%; border: 1px solid #d1d5db; border-radius: 8px; padding: 0.75rem; font-size: 0.88rem; font-family: ui-monospace, monospace; color: #374151; resize: vertical; outline: none; transition: border-color 0.15s; }
+.ia-textarea:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+.ia-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem; }
+.ia-parse-btn { gap: 0.5rem; display: inline-flex; align-items: center; }
+.ia-extracted-header { margin-bottom: 1rem; }
+
+.ia-extracted-list, .ia-existing-list { display: flex; flex-direction: column; gap: 0.6rem; }
+.ia-extracted-item, .ia-existing-item {
+  display: flex; align-items: flex-start; gap: 0.75rem;
+  padding: 0.75rem 1rem; border-radius: 8px;
+  background: #f8faff; border: 1px solid #e5e7eb; transition: all 0.15s;
+}
+.ia-pinned { background: #fffbeb; border-color: #fde68a; }
+.ia-item-check { padding-top: 0.15rem; }
+.ia-checkbox { width: 16px; height: 16px; accent-color: #2563eb; cursor: pointer; }
+.ia-item-body { flex: 1; min-width: 0; }
+.ia-item-meta { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.3rem; }
+.ia-author { font-size: 0.8rem; font-weight: 700; color: #1a1a2e; }
+.ia-date { font-size: 0.75rem; color: #9ca3af; }
+.ia-pin-badge { font-size: 0.7rem; font-weight: 700; color: #d97706; background: #fef3c7; padding: 0.1rem 0.45rem; border-radius: 8px; }
+.ia-item-text { font-size: 0.88rem; color: #374151; line-height: 1.5; }
+.ia-pin-toggle { background: none; border: none; cursor: pointer; color: #d97706; font-size: 1rem; padding: 0.25rem; flex-shrink: 0; }
+.ia-pin-off { color: #d1d5db; }
+.ia-existing-actions { display: flex; flex-direction: column; gap: 0.25rem; flex-shrink: 0; }
+.ia-icon-btn { background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 0.95rem; padding: 0.3rem; border-radius: 4px; transition: color 0.15s; }
+.ia-icon-btn:hover { color: #d97706; }
+.ia-icon-btn-del:hover { color: #dc2626; }
+.flash { padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem; }
+.flash-success { background: #dcfce7; color: #166534; }
+.flash-error { background: #fee2e2; color: #991b1b; }
+</style>
+{% endblock %}

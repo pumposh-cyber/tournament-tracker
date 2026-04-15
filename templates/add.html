@@ -3,88 +3,176 @@
 {% block title %}Add Tournament{% endblock %}
 
 {% block content %}
-<div class="form-page">
-    <a href="{{ url_for('index') }}" class="back-link">Back to Schedule</a>
-    <h1>Add Tournament</h1>
+<div class="add-chat-page">
 
-    <form method="POST" class="tournament-form">
+  {# ── Chat-first landing (shown until form is filled) ── #}
+  <div class="add-chat-landing" id="add-landing">
+    <div class="add-chat-hero">
+      <div class="add-chat-icon"><i class="fas fa-volleyball"></i></div>
+      <h1>Add a Tournament</h1>
+      <p>Tell VolleyAI about the tournament and it'll fill everything in for you.</p>
+      <div class="add-chat-hints">
+        <span><i class="fas fa-microphone-lines"></i> Describe it naturally</span>
+        <span><i class="fab fa-whatsapp"></i> Paste an announcement</span>
+        <span><i class="fas fa-wand-magic-sparkles"></i> AI extracts the details</span>
+      </div>
+      <button class="btn btn-primary add-chat-open-btn" id="add-open-chat-btn">
+        <i class="fas fa-volleyball"></i> Open VolleyAI
+      </button>
+      <button class="btn add-form-toggle-btn" id="add-show-form-btn">
+        <i class="fas fa-list"></i> Fill form manually
+      </button>
+    </div>
+  </div>
+
+  {# ── Form (hidden until filled by AI or manual toggle) ── #}
+  <div class="add-form-wrapper" id="add-form-wrapper" style="display:none">
+    <div class="add-form-header">
+      <a href="{{ url_for('index') }}" class="back-link"><i class="fas fa-arrow-left"></i> Back to Schedule</a>
+      <div class="add-form-title-row">
+        <h1>Add Tournament</h1>
+        <span class="add-form-badge" id="add-form-badge" style="display:none">
+          <i class="fas fa-wand-magic-sparkles"></i> AI filled
+        </span>
+      </div>
+    </div>
+
+    <form method="POST" class="tournament-form" id="tournament-form">
+      <div class="form-group">
+        <label for="event">Event Name</label>
+        <input type="text" id="event" name="event" required>
+      </div>
+      <div class="form-row">
         <div class="form-group">
-            <label for="event">Event Name</label>
-            <input type="text" id="event" name="event" required>
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label for="date">Start Date</label>
-                <input type="date" id="date" name="date" required>
-            </div>
-            <div class="form-group">
-                <label for="dates_display">Date Range Display (e.g. "Feb 14-16, 2026")</label>
-                <input type="text" id="dates_display" name="dates_display" placeholder="Leave blank to auto-fill from start date">
-            </div>
-        </div>
-        <div class="form-group">
-            <label for="days">Day(s)</label>
-            <input type="text" id="days" name="days" placeholder="e.g. Sat-Sun (2 days)">
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label for="city">City</label>
-                <input type="text" id="city" name="city" required>
-            </div>
-            <div class="form-group">
-                <label for="venue">Venue</label>
-                <input type="text" id="venue" name="venue" required>
-            </div>
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label for="hotel_recommendation">Hotel Recommendation</label>
-                <input type="text" id="hotel_recommendation" name="hotel_recommendation">
-            </div>
-            <div class="form-group">
-                <label for="hotel_link_notes">Hotel Link / Notes</label>
-                <input type="text" id="hotel_link_notes" name="hotel_link_notes">
-            </div>
-        </div>
-        <div class="form-group">
-            <label for="car_rental_recommendation">Car Rental Recommendation</label>
-            <input type="text" id="car_rental_recommendation" name="car_rental_recommendation">
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label for="hotel_booking_status">Hotel Booking Status</label>
-                <select id="hotel_booking_status" name="hotel_booking_status">
-                    <option value="">-- Select --</option>
-                    <option value="Pending">Pending</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Booked">Booked</option>
-                    <option value="Completed">Completed</option>
-                    <option value="Required">Required</option>
-                    <option value="Not needed">Not needed</option>
-                    <option value="No">No</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="car_booking_status">Car Booking Status</label>
-                <select id="car_booking_status" name="car_booking_status">
-                    <option value="">-- Select --</option>
-                    <option value="Pending">Pending</option>
-                    <option value="Recommended">Recommended</option>
-                    <option value="Completed">Completed</option>
-                    <option value="Required">Required</option>
-                    <option value="Not needed">Not needed</option>
-                    <option value="Maybe">Maybe</option>
-                </select>
-            </div>
+          <label for="date">Start Date</label>
+          <input type="date" id="date" name="date" required>
         </div>
         <div class="form-group">
-            <label for="notes">Notes / Status</label>
-            <textarea id="notes" name="notes" rows="3"></textarea>
+          <label for="dates_display">Date Range Display (e.g. "Feb 14-16, 2026")</label>
+          <input type="text" id="dates_display" name="dates_display" placeholder="Leave blank to auto-fill from start date">
         </div>
-        <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Add Tournament</button>
-            <a href="{{ url_for('index') }}" class="btn">Cancel</a>
+      </div>
+      <div class="form-group">
+        <label for="days">Day(s)</label>
+        <input type="text" id="days" name="days" placeholder="e.g. Sat-Sun (2 days)">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="city">City</label>
+          <input type="text" id="city" name="city" required>
         </div>
+        <div class="form-group">
+          <label for="venue">Venue</label>
+          <input type="text" id="venue" name="venue" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="hotel_recommendation">Hotel Recommendation</label>
+          <input type="text" id="hotel_recommendation" name="hotel_recommendation">
+        </div>
+        <div class="form-group">
+          <label for="hotel_link_notes">Hotel Link / Notes</label>
+          <input type="text" id="hotel_link_notes" name="hotel_link_notes">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="car_rental_recommendation">Car Rental Recommendation</label>
+        <input type="text" id="car_rental_recommendation" name="car_rental_recommendation">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="hotel_booking_status">Hotel Booking Status</label>
+          <select id="hotel_booking_status" name="hotel_booking_status">
+            <option value="">-- Select --</option>
+            <option value="Pending">Pending</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Booked">Booked</option>
+            <option value="Completed">Completed</option>
+            <option value="Required">Required</option>
+            <option value="Not needed">Not needed</option>
+            <option value="No">No</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="car_booking_status">Car Booking Status</label>
+          <select id="car_booking_status" name="car_booking_status">
+            <option value="">-- Select --</option>
+            <option value="Pending">Pending</option>
+            <option value="Recommended">Recommended</option>
+            <option value="Completed">Completed</option>
+            <option value="Required">Required</option>
+            <option value="Not needed">Not needed</option>
+            <option value="Maybe">Maybe</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="notes">Notes / Status</label>
+        <textarea id="notes" name="notes" rows="3"></textarea>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Add Tournament</button>
+        <a href="{{ url_for('index') }}" class="btn">Cancel</a>
+      </div>
     </form>
+  </div>
+
 </div>
+
+<style>
+.add-chat-page { max-width: 640px; margin: 0 auto; }
+
+/* ── Landing ── */
+.add-chat-landing { padding: 3rem 1rem; text-align: center; }
+.add-chat-hero { background: var(--surface); border-radius: 16px; padding: 3rem 2rem; box-shadow: var(--shadow-sm); }
+.add-chat-icon { font-size: 2.8rem; color: var(--ai-green); margin-bottom: 1rem; }
+.add-chat-hero h1 { font-size: 1.8rem; color: var(--text); margin-bottom: 0.5rem; }
+.add-chat-hero p  { color: var(--text-muted); font-size: 1rem; margin-bottom: 1.5rem; }
+.add-chat-hints {
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: 0.6rem; margin-bottom: 2rem;
+}
+.add-chat-hints span {
+  display: flex; align-items: center; gap: 0.4rem;
+  background: var(--surface-2); border: 1px solid var(--border);
+  padding: 0.35rem 0.85rem; border-radius: 20px;
+  font-size: 0.83rem; color: var(--text-muted);
+}
+.add-chat-hints span i { color: var(--primary); }
+.add-chat-hints span i.fa-whatsapp { color: #25d366; }
+.add-chat-hints span i.fa-wand-magic-sparkles { color: var(--ai-green); }
+.add-chat-open-btn { font-size: 1rem; padding: 0.75rem 2rem; display: inline-flex; align-items: center; gap: 0.5rem; }
+.add-form-toggle-btn { margin-left: 0.75rem; color: var(--text-muted); font-size: 0.88rem; }
+
+/* ── Form revealed ── */
+.add-form-wrapper { padding: 1rem 0 2rem; animation: fadeInUp 0.3s ease; }
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.add-form-header { margin-bottom: 1.25rem; }
+.add-form-title-row { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.5rem; }
+.add-form-title-row h1 { font-size: 1.6rem; color: var(--text); }
+.add-form-badge {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  background: linear-gradient(135deg, #dcfce7, #d1fae5);
+  color: #166534; border: 1px solid #86efac;
+  font-size: 0.78rem; font-weight: 700;
+  padding: 0.25rem 0.75rem; border-radius: 20px;
+}
+[data-theme="dark"] .add-form-badge { background: var(--success-bg); color: #4ade80; border-color: var(--success-border); }
+</style>
+
+<script>
+document.getElementById('add-open-chat-btn').addEventListener('click', function() {
+    if (typeof openChat === 'function') openChat();
+});
+document.getElementById('add-show-form-btn').addEventListener('click', function() {
+    document.getElementById('add-landing').style.display = 'none';
+    var wrapper = document.getElementById('add-form-wrapper');
+    wrapper.style.display = 'block';
+    wrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+</script>
 {% endblock %}

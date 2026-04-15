@@ -58,12 +58,12 @@
         </thead>
         <tbody>
             {% for t in tournaments %}
-            <tr class="{% if t.is_cancelled %}row-cancelled{% elif t.date_start < now %}row-past{% else %}row-upcoming{% endif %}">
+            <tr class="{% if t.is_cancelled %}row-cancelled{% elif t.date_end < now %}row-past{% else %}row-upcoming{% endif %}">
                 <td>
                     {% if t.is_cancelled %}
                         <span class="badge badge-cancelled">Cancelled</span>
-                    {% elif t.date_start < now %}
-                        <span class="badge badge-past">Past</span>
+                    {% elif t.date_end < now %}
+                        <span class="badge badge-done"><i class="fas fa-circle-check"></i> Done</span>
                     {% else %}
                         <span class="badge badge-upcoming">Upcoming</span>
                     {% endif %}
@@ -85,7 +85,7 @@
                 </td>
                 <td class="action-cell">
                     <a href="{{ url_for('tournament_detail', tournament_id=t.id) }}" class="btn btn-small">View</a>
-                    {% if not t.is_cancelled and t.date_start >= now %}
+                    {% if not t.is_cancelled and t.date_end >= now %}
                     <a href="{{ url_for('tournament_checklist', tournament_id=t.id) }}" class="btn btn-small btn-checklist" title="Travel Checklist"><i class="fas fa-clipboard-check"></i></a>
                     {% endif %}
                 </td>
