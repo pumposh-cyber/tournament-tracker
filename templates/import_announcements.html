@@ -8,7 +8,7 @@
 
   <div class="ia-header">
     <h1><i class="fab fa-whatsapp ia-wa-icon"></i> WhatsApp Announcements</h1>
-    <p class="ia-sub">Paste your WhatsApp group chat export. Claude will extract the key announcements automatically.</p>
+    <p class="ia-sub">Paste chat text, drop a screenshot, or upload the WhatsApp export zip. Gemini AI extracts the key announcements.</p>
   </div>
 
   {% with messages = get_flashed_messages(with_categories=true) %}
@@ -16,7 +16,6 @@
     <div class="flash flash-{{ cat }}">{{ msg }}</div>
     {% endfor %}
   {% endwith %}
-
   {% if error %}
   <div class="flash flash-error"><i class="fas fa-triangle-exclamation"></i> {{ error }}</div>
   {% endif %}
@@ -24,22 +23,52 @@
   {# ── PASTE & PARSE ── #}
   {% if not extracted %}
   <div class="ia-card">
-    <h2><i class="fas fa-paste"></i> Paste Chat Export</h2>
+    <h2><i class="fas fa-paste"></i> Paste or Drop Chat</h2>
     <p class="ia-hint">
-      In WhatsApp: open the group → ⋮ → More → Export chat → Without media → copy the text here.
+      <strong>Text:</strong> WhatsApp → ⋮ → More → Export chat → Without media → copy here.<br>
+      <strong>File:</strong> Drop the exported <code>.zip</code>, <code>.txt</code>, or a <strong>screenshot</strong> (.jpg / .png) anywhere in the box below.
     </p>
-    <form method="POST">
+
+    <form method="POST" enctype="multipart/form-data" id="parse-form">
       <input type="hidden" name="action" value="parse">
-      <textarea name="whatsapp_text" class="ia-textarea" rows="14"
+
+      {# ── Drop zone ── #}
+      <div class="ia-dropzone" id="ia-dropzone">
+        <div class="ia-dropzone-inner" id="ia-dropzone-inner">
+          <i class="fas fa-cloud-arrow-up ia-drop-icon"></i>
+          <p class="ia-drop-label">Drop a <strong>.zip</strong>, <strong>.txt</strong>, or <strong>screenshot</strong> here</p>
+          <p class="ia-drop-sub">or <label for="upload_file" class="ia-drop-browse">browse files</label></p>
+          <input type="file" id="upload_file" name="upload_file" accept=".zip,.txt,.jpg,.jpeg,.png,.gif,.webp" style="display:none">
+        </div>
+        <div class="ia-drop-selected" id="ia-drop-selected" style="display:none">
+          <i class="fas fa-file-circle-check ia-drop-ok-icon"></i>
+          <span id="ia-drop-filename"></span>
+          <button type="button" class="ia-drop-clear" id="ia-drop-clear" title="Remove file"><i class="fas fa-xmark"></i></button>
+        </div>
+      </div>
+
+      <div class="ia-divider"><span>or paste text below</span></div>
+
+      <textarea name="whatsapp_text" class="ia-textarea" id="ia-textarea" rows="10"
         placeholder="[4/14/26, 8:12 AM] Coach Mike: Report time is 7:00 AM Friday at Gate 5. Wear full uniform.&#10;[4/12/26, 2:00 PM] UVAC Admin: AES bracket is live! We're in Pool B...&#10;..."></textarea>
+
       <div class="ia-actions">
-        <button type="submit" class="btn btn-primary ia-parse-btn">
+        <button type="submit" class="btn btn-primary ia-parse-btn" id="ia-submit-btn">
           <i class="fas fa-wand-magic-sparkles"></i> Extract with Gemini AI
         </button>
       </div>
     </form>
   </div>
   {% endif %}
+
+  {# ── PROCESSING OVERLAY ── #}
+  <div class="ia-processing" id="ia-processing" style="display:none">
+    <div class="ia-processing-inner">
+      <div class="ia-spinner"></div>
+      <p class="ia-processing-title">Processing with Gemini AI…</p>
+      <p class="ia-processing-sub" id="ia-processing-sub">Reading your content</p>
+    </div>
+  </div>
 
   {# ── REVIEW EXTRACTED ── #}
   {% if extracted %}
@@ -51,7 +80,6 @@
     <form method="POST">
       <input type="hidden" name="action" value="save">
       <input type="hidden" name="items_json" id="items-json" value="">
-
       <div class="ia-extracted-list" id="extracted-list">
         {% for item in extracted %}
         <div class="ia-extracted-item {% if item.pinned %}ia-pinned{% endif %}" data-index="{{ loop.index0 }}">
@@ -74,22 +102,18 @@
         </div>
         {% endfor %}
       </div>
-
       <div class="ia-actions" style="margin-top:1.25rem">
         <button type="submit" class="btn btn-primary" onclick="prepareJson()">
           <i class="fas fa-floppy-disk"></i> Save Selected
         </button>
         <a href="{{ url_for('import_announcements', tournament_id=tournament.id) }}" class="btn">
-          <i class="fas fa-rotate-left"></i> Paste Again
+          <i class="fas fa-rotate-left"></i> Import Again
         </a>
       </div>
     </form>
   </div>
-
   <script>
-  // Store extracted data for manipulation
   const items = {{ extracted | tojson }};
-
   function togglePinned(idx) {
     items[idx].pinned = !items[idx].pinned;
     const el = document.querySelector('[data-index="' + idx + '"]');
@@ -107,7 +131,6 @@
       badge.remove();
     }
   }
-
   function prepareJson() {
     const checks = document.querySelectorAll('.ia-checkbox');
     const selected = items.filter((_, i) => checks[i] && checks[i].checked);
@@ -116,7 +139,7 @@
   </script>
   {% endif %}
 
-  {# ── EXISTING ANNOUNCEMENTS ── #}
+  {# ── EXISTING ── #}
   {% if existing %}
   <div class="ia-card">
     <h2><i class="fas fa-clipboard-list"></i> Saved Announcements ({{ existing|length }})</h2>
@@ -144,47 +167,195 @@
     </div>
   </div>
   {% endif %}
-
 </div>
 
 <style>
 .ia-page { max-width: 760px; }
 .ia-header { margin-bottom: 1.5rem; }
-.ia-header h1 { font-size: 1.6rem; display: flex; align-items: center; gap: 0.5rem; }
+.ia-header h1 { font-size: 1.6rem; display: flex; align-items: center; gap: 0.5rem; color: var(--text); }
 .ia-wa-icon { color: #25d366; }
-.ia-sub { color: #6b7280; margin-top: 0.3rem; font-size: 0.95rem; }
-.ia-card { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); padding: 1.5rem; margin-bottom: 1.25rem; }
-.ia-card h2 { font-size: 1.05rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; }
-.ia-hint { font-size: 0.85rem; color: #6b7280; margin-bottom: 0.75rem; line-height: 1.5; }
-.ia-textarea { width: 100%; border: 1px solid #d1d5db; border-radius: 8px; padding: 0.75rem; font-size: 0.88rem; font-family: ui-monospace, monospace; color: #374151; resize: vertical; outline: none; transition: border-color 0.15s; }
-.ia-textarea:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+.ia-sub { color: var(--text-muted); margin-top: 0.3rem; font-size: 0.95rem; }
+.ia-card { background: var(--surface); border-radius: 10px; box-shadow: var(--shadow-sm); padding: 1.5rem; margin-bottom: 1.25rem; border: 1px solid var(--border-light); }
+.ia-card h2 { font-size: 1.05rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; color: var(--text); }
+.ia-hint { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem; line-height: 1.5; }
+.ia-hint code { background: var(--surface-2); padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.82rem; }
+
+/* ── Drop zone ── */
+.ia-dropzone {
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  transition: border-color 0.2s, background 0.2s;
+  margin-bottom: 0.75rem;
+  min-height: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.ia-dropzone.drag-over { border-color: var(--primary); background: var(--primary-bg); }
+.ia-dropzone-inner { text-align: center; padding: 1.25rem 1rem; }
+.ia-drop-icon { font-size: 2rem; color: var(--text-faint); margin-bottom: 0.5rem; display: block; }
+.ia-drop-label { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.2rem; }
+.ia-drop-sub { font-size: 0.82rem; color: var(--text-faint); }
+.ia-drop-browse { color: var(--primary); cursor: pointer; text-decoration: underline; font-weight: 600; }
+.ia-drop-selected { display: flex; align-items: center; gap: 0.75rem; padding: 0.85rem 1.2rem; }
+.ia-drop-ok-icon { font-size: 1.4rem; color: var(--success); }
+.ia-drop-selected span { font-size: 0.9rem; color: var(--text); font-weight: 500; flex: 1; word-break: break-all; }
+.ia-drop-clear { background: none; border: none; cursor: pointer; color: var(--text-faint); font-size: 1rem; padding: 0.2rem 0.4rem; border-radius: 4px; transition: color 0.15s; }
+.ia-drop-clear:hover { color: var(--danger); }
+
+.ia-divider { display: flex; align-items: center; gap: 0.75rem; margin: 0.75rem 0; color: var(--text-faint); font-size: 0.8rem; }
+.ia-divider::before, .ia-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+.ia-textarea { width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; font-size: 0.88rem; font-family: ui-monospace, monospace; color: var(--text); background: var(--surface); resize: vertical; outline: none; transition: border-color 0.15s; }
+.ia-textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
 .ia-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem; }
 .ia-parse-btn { gap: 0.5rem; display: inline-flex; align-items: center; }
-.ia-extracted-header { margin-bottom: 1rem; }
 
+/* ── Processing overlay ── */
+.ia-processing {
+  position: fixed; inset: 0; z-index: 980;
+  background: rgba(0,0,0,0.55);
+  display: flex; align-items: center; justify-content: center;
+}
+.ia-processing-inner {
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 2.5rem 3rem;
+  text-align: center;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+  max-width: 320px;
+}
+.ia-spinner {
+  width: 52px; height: 52px; border-radius: 50%;
+  border: 4px solid var(--border);
+  border-top-color: var(--ai-green);
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 1.25rem;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.ia-processing-title { font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 0.4rem; }
+.ia-processing-sub { font-size: 0.85rem; color: var(--text-muted); }
+
+/* ── Extracted / existing lists ── */
+.ia-extracted-header { margin-bottom: 1rem; }
 .ia-extracted-list, .ia-existing-list { display: flex; flex-direction: column; gap: 0.6rem; }
 .ia-extracted-item, .ia-existing-item {
   display: flex; align-items: flex-start; gap: 0.75rem;
   padding: 0.75rem 1rem; border-radius: 8px;
-  background: #f8faff; border: 1px solid #e5e7eb; transition: all 0.15s;
+  background: var(--surface-2); border: 1px solid var(--border); transition: all 0.15s;
 }
 .ia-pinned { background: #fffbeb; border-color: #fde68a; }
+[data-theme="dark"] .ia-pinned { background: #2a1800; border-color: #5a3a00; }
 .ia-item-check { padding-top: 0.15rem; }
-.ia-checkbox { width: 16px; height: 16px; accent-color: #2563eb; cursor: pointer; }
+.ia-checkbox { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; }
 .ia-item-body { flex: 1; min-width: 0; }
 .ia-item-meta { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.3rem; }
-.ia-author { font-size: 0.8rem; font-weight: 700; color: #1a1a2e; }
-.ia-date { font-size: 0.75rem; color: #9ca3af; }
+.ia-author { font-size: 0.8rem; font-weight: 700; color: var(--text); }
+.ia-date { font-size: 0.75rem; color: var(--text-faint); }
 .ia-pin-badge { font-size: 0.7rem; font-weight: 700; color: #d97706; background: #fef3c7; padding: 0.1rem 0.45rem; border-radius: 8px; }
-.ia-item-text { font-size: 0.88rem; color: #374151; line-height: 1.5; }
+.ia-item-text { font-size: 0.88rem; color: var(--text-3); line-height: 1.5; }
 .ia-pin-toggle { background: none; border: none; cursor: pointer; color: #d97706; font-size: 1rem; padding: 0.25rem; flex-shrink: 0; }
-.ia-pin-off { color: #d1d5db; }
+.ia-pin-off { color: var(--text-faint); }
 .ia-existing-actions { display: flex; flex-direction: column; gap: 0.25rem; flex-shrink: 0; }
-.ia-icon-btn { background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 0.95rem; padding: 0.3rem; border-radius: 4px; transition: color 0.15s; }
+.ia-icon-btn { background: none; border: none; cursor: pointer; color: var(--text-faint); font-size: 0.95rem; padding: 0.3rem; border-radius: 4px; transition: color 0.15s; }
 .ia-icon-btn:hover { color: #d97706; }
-.ia-icon-btn-del:hover { color: #dc2626; }
+.ia-icon-btn-del:hover { color: var(--danger); }
 .flash { padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem; }
-.flash-success { background: #dcfce7; color: #166534; }
-.flash-error { background: #fee2e2; color: #991b1b; }
+.flash-success { background: var(--success-bg); color: var(--success); }
+.flash-error { background: var(--danger-bg); color: var(--danger-text); }
 </style>
+
+<script>
+// ── Drop zone logic ──
+const dropzone   = document.getElementById('ia-dropzone');
+const fileInput  = document.getElementById('upload_file');
+const dzInner    = document.getElementById('ia-dropzone-inner');
+const dzSelected = document.getElementById('ia-drop-selected');
+const dzFilename = document.getElementById('ia-drop-filename');
+const dzClear    = document.getElementById('ia-drop-clear');
+
+if (dropzone) {
+  dropzone.addEventListener('click', function(e) {
+    if (!e.target.closest('.ia-drop-clear') && !e.target.closest('.ia-drop-browse')) {
+      fileInput.click();
+    }
+  });
+  ['dragenter','dragover'].forEach(function(ev) {
+    dropzone.addEventListener(ev, function(e) { e.preventDefault(); dropzone.classList.add('drag-over'); });
+  });
+  ['dragleave','drop'].forEach(function(ev) {
+    dropzone.addEventListener(ev, function(e) { e.preventDefault(); dropzone.classList.remove('drag-over'); });
+  });
+  dropzone.addEventListener('drop', function(e) {
+    var files = e.dataTransfer.files;
+    if (files.length) setFile(files[0]);
+  });
+  fileInput.addEventListener('change', function() {
+    if (this.files.length) setFile(this.files[0]);
+  });
+  dzClear && dzClear.addEventListener('click', function(e) {
+    e.stopPropagation();
+    fileInput.value = '';
+    dzInner.style.display = '';
+    dzSelected.style.display = 'none';
+  });
+}
+
+function setFile(file) {
+  dzFilename.textContent = file.name;
+  dzInner.style.display = 'none';
+  dzSelected.style.display = 'flex';
+  // Transfer to the hidden input (for display only — actual file comes from the real input)
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  fileInput.files = dt.files;
+}
+
+// ── Processing state ──
+var processingMessages = [
+  'Reading your content',
+  'Analysing messages',
+  'Identifying key announcements',
+  'Almost done…'
+];
+var processingIdx = 0;
+var processingTimer;
+
+function startProcessing(fileType) {
+  var overlay = document.getElementById('ia-processing');
+  var sub = document.getElementById('ia-processing-sub');
+  if (!overlay) return;
+  overlay.style.display = 'flex';
+  processingIdx = 0;
+  if (fileType === 'image') processingMessages[0] = 'Reading screenshot with vision AI';
+  else if (fileType === 'zip') processingMessages[0] = 'Extracting chat from zip file';
+  else processingMessages[0] = 'Reading your content';
+  sub.textContent = processingMessages[0];
+  processingTimer = setInterval(function() {
+    processingIdx = Math.min(processingIdx + 1, processingMessages.length - 1);
+    sub.textContent = processingMessages[processingIdx];
+  }, 2200);
+}
+
+var form = document.getElementById('parse-form');
+if (form) {
+  form.addEventListener('submit', function() {
+    var file = fileInput && fileInput.files && fileInput.files[0];
+    var hasText = document.getElementById('ia-textarea') && document.getElementById('ia-textarea').value.trim().length > 0;
+    var fileType = 'text';
+    if (file) {
+      var fn = file.name.toLowerCase();
+      if (fn.match(/\.(jpg|jpeg|png|gif|webp)$/)) fileType = 'image';
+      else if (fn.endsWith('.zip')) fileType = 'zip';
+      else fileType = 'txt';
+    }
+    // Disable submit button
+    var btn = document.getElementById('ia-submit-btn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing…'; }
+    startProcessing(fileType);
+  });
+}
+</script>
 {% endblock %}

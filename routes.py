@@ -262,32 +262,66 @@ def import_announcements(tournament_id):
         action = request.form.get("action")
 
         if action == "parse":
+            import json, zipfile, io, base64
+            from google import genai as _genai
+
             raw = request.form.get("whatsapp_text", "").strip()
-            if not raw:
-                error = "Paste some WhatsApp text first."
-            else:
+            uploaded = request.files.get("upload_file")
+            image_data = None  # (bytes, mime_type) for vision requests
+
+            # ── Handle uploaded file ──
+            if uploaded and uploaded.filename:
+                fname = uploaded.filename.lower()
+                content_bytes = uploaded.read()
+                if fname.endswith(".zip"):
+                    # WhatsApp export zip — extract the .txt chat file
+                    try:
+                        with zipfile.ZipFile(io.BytesIO(content_bytes)) as zf:
+                            txt_files = [n for n in zf.namelist()
+                                         if n.endswith(".txt") and not n.startswith("__MACOSX")]
+                            if txt_files:
+                                raw = zf.read(txt_files[0]).decode("utf-8", errors="replace")
+                            else:
+                                error = "No .txt file found inside the zip."
+                    except Exception as e:
+                        error = f"Could not open zip: {e}"
+                elif fname.endswith(".txt"):
+                    raw = content_bytes.decode("utf-8", errors="replace")
+                elif any(fname.endswith(ext) for ext in (".jpg", ".jpeg", ".png", ".gif", ".webp")):
+                    mime = "image/jpeg" if fname.endswith((".jpg", ".jpeg")) else \
+                           "image/png" if fname.endswith(".png") else \
+                           "image/gif" if fname.endswith(".gif") else "image/webp"
+                    image_data = (content_bytes, mime)
+                else:
+                    error = "Unsupported file type. Use .txt, .zip, or an image screenshot."
+
+            if not raw and not image_data and not error:
+                error = "Paste some WhatsApp text, or drop a file."
+
+            if not error:
                 try:
-                    import json
-                    from google import genai as _genai
                     _gclient = _genai.Client(api_key=os.environ.get("GOOGLE_API_KEY"))
-                    prompt = f"""You are parsing a WhatsApp group chat export for a youth volleyball tournament parent group.
+                    EXTRACT_INSTRUCTIONS = """Extract the most important messages from this WhatsApp volleyball parent group chat.
+Keep: coach instructions, logistics, schedule info, hotel/car reminders, key updates.
+Skip: casual chatter, emoji reactions, "thanks", "👍" replies, off-topic messages.
 
-Extract the most important messages — coach instructions, logistics, schedule info, hotel/car reminders, and any key updates.
-Ignore casual chatter, emoji reactions, "thanks", "👍" replies, and off-topic messages.
+For each message return:
+- author: first name only
+- date: date/time as it appears (e.g. "Apr 14, 8:12 AM")
+- text: message cleaned up but not paraphrased — keep specifics
+- pinned: true if critical logistics (report time, hotel, venue, schedule, uniform, parking)
 
-For each important message return:
-- author: person's name (first name only)
-- date: date/time string as it appears in the chat (e.g. "Apr 14, 8:12 AM")
-- text: the message, cleaned up but not paraphrased — keep specifics
-- pinned: true if this is critical logistics (report time, hotel, venue, schedule, uniform, parking). false otherwise.
+Return ONLY a JSON array. No markdown. Example:
+[{"author":"Coach Mike","date":"Apr 14, 7:00 AM","text":"Report time is 7:00 AM Friday at Gate 5. Wear full uniform.","pinned":true}]"""
 
-Return ONLY a JSON array. No explanation, no markdown fences. Example:
-[{{"author":"Coach Mike","date":"Apr 14, 7:00 AM","text":"Report time is 7:00 AM Friday at Gate 5. Wear full uniform.","pinned":true}}]
+                    if image_data:
+                        from google.genai import types as _gtypes
+                        img_part = _gtypes.Part.from_bytes(data=image_data[0], mime_type=image_data[1])
+                        contents = [img_part, EXTRACT_INSTRUCTIONS + "\n\nExtract from the screenshot above."]
+                    else:
+                        contents = EXTRACT_INSTRUCTIONS + f"\n\nWhatsApp chat:\n{raw[:8000]}"
 
-WhatsApp chat:
-{raw[:6000]}"""
-
-                    response = _gclient.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+                    response = _gclient.models.generate_content(model="gemini-2.5-flash", contents=contents)
                     raw_json = response.text.strip().lstrip("```json").lstrip("```").rstrip("```").strip()
                     extracted = json.loads(raw_json)
                 except Exception as e:
