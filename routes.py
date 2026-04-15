@@ -301,18 +301,24 @@ def import_announcements(tournament_id):
             if not error:
                 try:
                     _gclient = _genai.Client(api_key=os.environ.get("GOOGLE_API_KEY"))
-                    EXTRACT_INSTRUCTIONS = """Extract the most important messages from this WhatsApp volleyball parent group chat.
-Keep: coach instructions, logistics, schedule info, hotel/car reminders, key updates.
-Skip: casual chatter, emoji reactions, "thanks", "👍" replies, off-topic messages.
+                    from datetime import datetime, timedelta
+                    cutoff_date = (datetime.now() - timedelta(days=7)).strftime("%B %d, %Y")
+                    EXTRACT_INSTRUCTIONS = f"""Extract ONLY the most important tournament-related messages from this WhatsApp group chat.
 
-For each message return:
+STRICT RULES:
+1. Only include messages from the last 7 days (after {cutoff_date}). Ignore everything older.
+2. Only include messages DIRECTLY about the upcoming tournament — logistics, schedule, hotel, car, venue, court assignments, warm-up times, uniform, parking, bracket, pool assignments, weather warnings.
+3. IGNORE completely: practice absences ("Sophia has a fever"), sick notices, personal messages, practice schedules, general team news unrelated to the upcoming tournament, casual chat, "thanks", reactions, one-word replies.
+
+For each qualifying message return:
 - author: first name only
 - date: date/time as it appears (e.g. "Apr 14, 8:12 AM")
 - text: message cleaned up but not paraphrased — keep specifics
-- pinned: true if critical logistics (report time, hotel, venue, schedule, uniform, parking)
+- pinned: true if critical logistics (report time, hotel, venue, schedule, uniform, parking, bracket)
 
-Return ONLY a JSON array. No markdown. Example:
-[{"author":"Coach Mike","date":"Apr 14, 7:00 AM","text":"Report time is 7:00 AM Friday at Gate 5. Wear full uniform.","pinned":true}]"""
+If no qualifying messages exist, return an empty array [].
+Return ONLY a JSON array. No markdown, no explanation. Example:
+[{{"author":"Coach Mike","date":"Apr 14, 7:00 AM","text":"Report time is 7:00 AM Friday at Gate 5. Wear full uniform.","pinned":true}}]"""
 
                     if image_data:
                         from google.genai import types as _gtypes
