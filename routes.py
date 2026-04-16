@@ -205,13 +205,75 @@ def delete_tournament(tournament_id):
     return redirect(url_for("index"))
 
 DEFAULT_CHECKLIST = {
-    "Essential Volleyball Gear": ["Jersey(s) and extra uniform shirt","Shorts / spandex (at least 2 pairs)","Knee pads","Volleyball shoes (game pair)","Backup athletic shoes or slides","Team socks (multiple pairs)","Warm-up jacket or hoodie","Hair ties / headband if needed","Athletic tape, pre-wrap, ankle brace (if used)"],
-    "Hydration and Nutrition": ["Large water bottle (filled)","Electrolyte packets or sports drink","Easy carbs: bananas, granola bars, bagels","Protein snacks: nuts, protein bars, yogurt","Quick sugar for between sets (fruit snacks, dates)","Packed lunch or plan for nearby food","Small cooler with ice pack"],
-    "Recovery and Injury Prevention": ["Foam roller or massage ball","Stretch band / resistance band","Pain relief cream or spray","Ice packs or instant cold packs","Ibuprofen or basic first-aid meds","Bandaids / blister care","Extra socks to change between matches"],
-    "Travel and Comfort Items": ["Backpack or volleyball bag","Phone + charger + portable battery","Tournament schedule screenshot or printout","Cash / card for food and parking","Blanket or small chair for seating","Change of clothes for after matches","Toiletries for hotel","Sleepwear"],
-    "Parent / Family Logistics": ["Directions to venue and parking info","Hotel confirmation","Emergency contacts","Snacks and water for siblings","Entertainment for downtime (book, tablet, headphones)"],
+    "Player — Volleyball Gear": [
+        "2-3 jerseys (home + away + backup)",
+        "2-3 pairs of spandex shorts",
+        "Knee pads (+ spare pair)",
+        "Volleyball shoes",
+        "Ankle braces (if worn)",
+        "2-3 pairs of volleyball socks",
+        "Warm-up jacket + pants",
+        "Hair ties / headbands",
+        "Athletic tape / pre-wrap",
+    ],
+    "Player — Personal & Recovery": [
+        "Water bottle (insulated, labeled)",
+        "Electrolyte packets / sports drinks",
+        "Snacks: protein bars, fruit, trail mix, crackers",
+        "Foam roller or massage ball",
+        "Reusable ice packs",
+        "Compression socks for recovery",
+        "3 sets of change-of-clothes (one per day)",
+        "Pajamas",
+        "Toiletries: toothbrush, deodorant, face wash",
+        "Flip flops (for hotel / shower)",
+    ],
+    "Parent — Tournament Day": [
+        "Printed or downloaded schedule (save offline)",
+        "Camping / folding chairs",
+        "Sideline snacks + cooler",
+        "Cash (some vendors are cash-only)",
+        "Portable phone charger / power bank",
+        "Ear plugs (loud gyms over 3 days)",
+        "Light jacket (convention centers are cold)",
+        "Small first aid kit: ibuprofen, band-aids, blister pads, Ace bandage",
+        "Sunscreen",
+    ],
+    "Parent — Logistics": [
+        "Hotel confirmation on phone + printed",
+        "Team contact list / coach phone number",
+        "Car charger",
+        "Drive snacks + drinks (5-hour drive each way)",
+        "Parking info for venue",
+    ],
+    "Family — Car & Hotel": [
+        "Gas tank full night before",
+        "Roadside emergency kit (verify in car)",
+        "Downloaded offline maps + venue address",
+        "Kids' entertainment: headphones, tablets, books",
+        "Trash bags for car",
+        "Paper towels / wet wipes",
+        "Laundry detergent pods (wash jerseys nightly)",
+        "Alarm set for early match days",
+        "Grocery run: breakfast items + quick snacks to reduce eating out",
+    ],
+    "Day-Before Checklist": [
+        "Check live dashboard for match times",
+        "Check weather forecast for venue city",
+        "Confirm hotel + team hotel grouping",
+        "Charge all devices overnight",
+        "Pack bag + set out uniform",
+        "Plan departure: leave 6 hrs before first match (5 hr drive + buffer)",
+    ],
 }
-CATEGORY_ICONS = {"Essential Volleyball Gear":"fa-volleyball","Hydration and Nutrition":"fa-bottle-water","Recovery and Injury Prevention":"fa-kit-medical","Travel and Comfort Items":"fa-suitcase-rolling","Parent / Family Logistics":"fa-users"}
+CATEGORY_ICONS = {
+    "Player — Volleyball Gear": "fa-volleyball",
+    "Player — Personal & Recovery": "fa-kit-medical",
+    "Parent — Tournament Day": "fa-users",
+    "Parent — Logistics": "fa-suitcase-rolling",
+    "Family — Car & Hotel": "fa-car",
+    "Day-Before Checklist": "fa-clipboard-check",
+}
 
 def init_checklist_for_tournament(tournament_id):
     order = 0
