@@ -18,7 +18,7 @@
     <div class="live-header-right">
       <div class="live-refresh-indicator" id="refresh-indicator">
         <i class="fas fa-rotate"></i>
-        <span id="refresh-countdown">60</span>s
+        <span id="refresh-countdown">30</span>s
       </div>
     </div>
   </div>
@@ -30,9 +30,12 @@
   </div>
   {% endif %}
 
-  {# ── Now Playing / Up Next ── #}
-  {% if current_match %}
-  <div class="live-now-card live-now-playing">
+  {# ── Now Playing / Up Next card — always rendered, JS updates in place ── #}
+  <div id="live-now-card"
+    class="live-now-card {% if current_match %}live-now-playing{% elif next_match %}live-up-next{% endif %}"
+    {% if not current_match and not next_match %}style="display:none"{% endif %}>
+
+    {% if current_match %}
     <div class="live-now-label"><i class="fas fa-circle-play"></i> NOW PLAYING</div>
     <div class="live-now-matchup">
       <span class="live-team-us">UVAC</span>
@@ -63,9 +66,8 @@
       <span><i class="fas fa-location-dot"></i> {{ current_match.court }}</span>
       <span><i class="fas fa-clock"></i> {{ current_match.start_time.strftime('%-I:%M %p') if current_match.start_time else 'TBD' }}</span>
     </div>
-  </div>
-  {% elif next_match %}
-  <div class="live-now-card live-up-next">
+
+    {% elif next_match %}
     <div class="live-now-label"><i class="fas fa-hourglass-half"></i> UP NEXT</div>
     <div class="live-now-matchup">
       <span class="live-team-us">UVAC</span>
@@ -76,8 +78,8 @@
       <span><i class="fas fa-location-dot"></i> {{ next_match.court }}</span>
       <span><i class="fas fa-clock"></i> {{ next_match.start_time.strftime('%a %-I:%M %p') if next_match.start_time else 'TBD' }}</span>
     </div>
+    {% endif %}
   </div>
-  {% endif %}
 
   {# ── Rounds ── #}
   {% for rnd in rounds %}
@@ -97,7 +99,8 @@
     {% if rnd.matches %}
     <div class="live-matches">
       {% for m in rnd.matches %}
-      <div class="live-match {{ 'live-match-playing' if m.our_role == 'playing' else 'live-match-work' }} {{ 'live-match-completed' if m.completed else '' }} {{ 'live-match-won' if m.winner == 'us' else 'live-match-lost' if m.winner == 'them' else '' }}">
+      <div class="live-match {{ 'live-match-playing' if m.our_role == 'playing' else 'live-match-work' }} {{ 'live-match-completed' if m.completed else '' }} {{ 'live-match-won' if m.winner == 'us' else 'live-match-lost' if m.winner == 'them' else '' }}"
+           data-match-id="{{ m.id }}">
 
         {# Match type badge #}
         <div class="live-match-role-badge {{ 'live-role-work' if m.our_role == 'work_team' else 'live-role-play' }}">
@@ -108,14 +111,15 @@
           {% endif %}
         </div>
 
-        {# Outcome badge #}
-        {% if m.winner == 'us' %}
-        <div class="live-match-outcome live-outcome-win"><i class="fas fa-trophy"></i> WIN</div>
-        {% elif m.winner == 'them' %}
-        <div class="live-match-outcome live-outcome-loss"><i class="fas fa-xmark"></i> LOSS</div>
-        {% elif m.completed %}
-        <div class="live-match-outcome live-outcome-done"><i class="fas fa-check"></i> Done</div>
-        {% endif %}
+        {# Outcome badge — gets updated by JS delta #}
+        <div class="live-match-outcome {% if m.winner == 'us' %}live-outcome-win{% elif m.winner == 'them' %}live-outcome-loss{% elif m.completed %}live-outcome-done{% endif %}"
+             id="match-outcome-{{ m.id }}"
+             {% if not m.winner and not m.completed %}style="display:none"{% endif %}>
+          {% if m.winner == 'us' %}<i class="fas fa-trophy"></i> WIN
+          {% elif m.winner == 'them' %}<i class="fas fa-xmark"></i> LOSS
+          {% elif m.completed %}<i class="fas fa-check"></i> Done
+          {% endif %}
+        </div>
 
         <div class="live-match-body">
           {# Opponent / teams #}
@@ -129,9 +133,9 @@
             {% endif %}
           </div>
 
-          {# Scores #}
-          {% if m.our_role == 'playing' and m.our_scores %}
-          <div class="live-match-scores">
+          {# Scores — gets updated by JS delta #}
+          <div class="live-match-scores" id="match-scores-{{ m.id }}">
+            {% if m.our_role == 'playing' and m.our_scores %}
             <div class="live-score-row-mini">
               <span class="live-score-team-label">Us</span>
               {% for s in m.our_scores %}
@@ -147,16 +151,14 @@
               <span class="live-set-mini {{ 'live-mini-win' if m.our_scores[loop.index0] is defined and s > m.our_scores[loop.index0] else 'live-mini-loss' if m.our_scores[loop.index0] is defined and s < m.our_scores[loop.index0] else '' }}">{{ s }}</span>
               {% endfor %}
             </div>
+            {% endif %}
           </div>
-          {% endif %}
 
           {# Time & Court #}
           <div class="live-match-meta">
             <span class="live-match-time">
               <i class="fas fa-clock"></i>
-              {% if m.start_time %}
-              {{ m.start_time.strftime('%a %-I:%M %p') }}
-              {% else %}TBD{% endif %}
+              {% if m.start_time %}{{ m.start_time.strftime('%a %-I:%M %p') }}{% else %}TBD{% endif %}
             </span>
             <span class="live-match-court">
               <i class="fas fa-location-dot"></i>
@@ -171,7 +173,6 @@
           </div>
         </div>
 
-        {# Match label #}
         <div class="live-match-label">{{ m.label }}</div>
       </div>
       {% endfor %}
@@ -201,28 +202,187 @@
 
 {% block extra_scripts %}
 <script>
-(function() {
-  const REFRESH_SEC = 60;
-  let countdown = REFRESH_SEC;
-  const el = document.getElementById('refresh-countdown');
-  const indicator = document.getElementById('refresh-indicator');
+(function () {
+  'use strict';
 
-  function tick() {
-    countdown--;
-    if (el) el.textContent = countdown;
-    if (countdown <= 0) {
-      window.location.reload();
+  // ── Server-rendered state ───────────────────────────────────────────────────
+  // matchesMeta: {matchId: {id, opponent, court, our_role, our_scores, opp_scores,
+  //               sets_won, sets_lost, completed, winner, time_fmt, day_fmt}}
+  var matchesMeta = {{ matches_meta | tojson }};
+  var currentVersion = {{ cache_version }};
+  var currentMatchId = {{ current_match.id if current_match else 'null' }};
+  var nextMatchId    = {{ next_match.id if next_match else 'null' }};
+
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+  function esc(s) {
+    return String(s || '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function miniScoresHtml(m) {
+    if (!m.our_scores || !m.our_scores.length) return '';
+    function row(mine, theirs, label) {
+      var spans = mine.map(function(s, i) {
+        var o = theirs[i];
+        var cls = (o !== undefined && o !== null)
+          ? (s > o ? 'live-mini-win' : s < o ? 'live-mini-loss' : '') : '';
+        return '<span class="live-set-mini ' + cls + '">' + s + '</span>';
+      }).join('');
+      var record = (label === 'Us' && (m.sets_won || m.sets_lost))
+        ? '<span class="live-sets-record">(' + m.sets_won + '-' + m.sets_lost + ')</span>' : '';
+      return '<div class="live-score-row-mini"><span class="live-score-team-label">' +
+             label + '</span>' + spans + record + '</div>';
+    }
+    return row(m.our_scores, m.opp_scores, 'Us') +
+           row(m.opp_scores, m.our_scores, 'Opp');
+  }
+
+  function nowScoreBlocksHtml(m) {
+    if (!m.our_scores || !m.our_scores.length) return '';
+    function setSpans(mine, theirs) {
+      return mine.map(function(s, i) {
+        var o = theirs[i];
+        var cls = (o !== undefined && o !== null)
+          ? (s > o ? 'live-set-win' : s < o ? 'live-set-loss' : '') : '';
+        return '<span class="live-set-score ' + cls + '">' + s + '</span>';
+      }).join('');
+    }
+    var oppShort = m.opponent.length > 12 ? m.opponent.slice(0, 12) : m.opponent;
+    return '<div class="live-score-row">' +
+      '<div class="live-score-block live-score-us">' +
+        '<div class="live-score-label">UVAC</div>' +
+        '<div class="live-score-sets">' + setSpans(m.our_scores, m.opp_scores) + '</div>' +
+      '</div>' +
+      '<div class="live-score-block live-score-them">' +
+        '<div class="live-score-label">' + esc(oppShort) + '</div>' +
+        '<div class="live-score-sets">' + setSpans(m.opp_scores, m.our_scores) + '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  // ── Update individual match card (scores + outcome badge) ───────────────────
+  function updateMatchCard(mid, scores) {
+    var card = document.querySelector('[data-match-id="' + mid + '"]');
+    if (!card) return;
+
+    // Update match metadata cache
+    var meta = matchesMeta[mid] || {};
+    Object.assign(meta, scores);
+    matchesMeta[mid] = meta;
+
+    // Scores div
+    var scoresEl = document.getElementById('match-scores-' + mid);
+    if (scoresEl) scoresEl.innerHTML = miniScoresHtml(meta);
+
+    // Outcome badge
+    var outcomeEl = document.getElementById('match-outcome-' + mid);
+    if (outcomeEl) {
+      if (scores.winner === 'us') {
+        outcomeEl.innerHTML = '<i class="fas fa-trophy"></i> WIN';
+        outcomeEl.className = 'live-match-outcome live-outcome-win';
+        outcomeEl.style.display = '';
+      } else if (scores.winner === 'them') {
+        outcomeEl.innerHTML = '<i class="fas fa-xmark"></i> LOSS';
+        outcomeEl.className = 'live-match-outcome live-outcome-loss';
+        outcomeEl.style.display = '';
+      } else if (scores.completed) {
+        outcomeEl.innerHTML = '<i class="fas fa-check"></i> Done';
+        outcomeEl.className = 'live-match-outcome live-outcome-done';
+        outcomeEl.style.display = '';
+      } else {
+        outcomeEl.style.display = 'none';
+      }
+    }
+
+    // Card CSS classes
+    card.classList.toggle('live-match-completed', !!scores.completed);
+    card.classList.toggle('live-match-won',       scores.winner === 'us');
+    card.classList.toggle('live-match-lost',      scores.winner === 'them');
+  }
+
+  // ── Re-render the NOW PLAYING / UP NEXT card ────────────────────────────────
+  function renderNowCard(matchId, mode) {
+    var card = document.getElementById('live-now-card');
+    if (!card) return;
+    var m = matchesMeta[String(matchId)];
+    if (!m) { card.style.display = 'none'; return; }
+
+    card.style.display = '';
+    var isNow = (mode === 'now');
+    card.className = 'live-now-card ' + (isNow ? 'live-now-playing' : 'live-up-next');
+
+    var timeStr = m.day_fmt ? (m.day_fmt + ' ' + m.time_fmt) : m.time_fmt;
+    card.innerHTML =
+      '<div class="live-now-label">' +
+        (isNow ? '<i class="fas fa-circle-play"></i> NOW PLAYING'
+               : '<i class="fas fa-hourglass-half"></i> UP NEXT') +
+      '</div>' +
+      '<div class="live-now-matchup">' +
+        '<span class="live-team-us">UVAC</span>' +
+        '<span class="live-now-vs">vs</span>' +
+        '<span class="live-team-them">' + esc(m.opponent) + '</span>' +
+      '</div>' +
+      (isNow ? nowScoreBlocksHtml(m) : '') +
+      '<div class="live-now-meta">' +
+        '<span><i class="fas fa-location-dot"></i> ' + esc(m.court) + '</span>' +
+        '<span><i class="fas fa-clock"></i> ' + esc(timeStr) + '</span>' +
+      '</div>';
+  }
+
+  // ── Apply a delta from /live/data ───────────────────────────────────────────
+  function applyDelta(delta) {
+    // Update each changed match card
+    var scores = delta.scores || {};
+    Object.keys(scores).forEach(function(mid) {
+      updateMatchCard(mid, scores[mid]);
+    });
+
+    // Re-render now/next card only if the active match changed
+    var newCM = delta.current_match_id;
+    var newNM = delta.next_match_id;
+    if (newCM !== currentMatchId || newNM !== nextMatchId) {
+      currentMatchId = newCM;
+      nextMatchId    = newNM;
+      if (newCM)      renderNowCard(newCM, 'now');
+      else if (newNM) renderNowCard(newNM, 'next');
+      else {
+        var card = document.getElementById('live-now-card');
+        if (card) card.style.display = 'none';
+      }
     }
   }
 
+  // ── Polling loop ─────────────────────────────────────────────────────────────
+  // Fetches /live/data?v=<version> every 30 s.
+  // Server returns {"changed":false} (~30 bytes) if nothing changed — tiny on
+  // bad venue wifi. Only updates DOM when data actually changed.
+  var POLL_SEC = 30;
+  var countdown = POLL_SEC;
+  var countdownEl = document.getElementById('refresh-countdown');
+  var indicator   = document.getElementById('refresh-indicator');
+
+  function tick() {
+    countdown--;
+    if (countdownEl) countdownEl.textContent = countdown;
+    if (countdown <= 5 && indicator) indicator.classList.add('live-spinning');
+    if (countdown <= 0) {
+      countdown = POLL_SEC;
+      if (indicator) indicator.classList.remove('live-spinning');
+      poll();
+    }
+  }
   setInterval(tick, 1000);
 
-  // Spin the icon every tick near refresh time
-  setInterval(function() {
-    if (countdown <= 5 && indicator) {
-      indicator.classList.add('live-spinning');
-    }
-  }, 1000);
+  function poll() {
+    fetch('/live/data?v=' + currentVersion, { cache: 'no-store' })
+      .then(function(r) { return r.json(); })
+      .then(function(delta) {
+        currentVersion = delta.version;
+        if (delta.changed) applyDelta(delta);
+      })
+      .catch(function() { /* silently skip on bad connection */ });
+  }
+
 })();
 </script>
 {% endblock %}

@@ -5,6 +5,9 @@ All endpoints use the public /api/public/ prefix — no auth required.
 
 import time
 import logging
+import threading
+import hashlib
+import json as _json
 from datetime import datetime, timezone
 from typing import Optional
 import requests
@@ -329,4 +332,119 @@ def get_team_schedule(event_id: int, team_id: int) -> dict:
         "now": now,
         "current_match": current_match,
         "next_match": next_match,
+    }
+
+
+# ── Server-side live prefetch (background thread) ─────────────────────────────
+#
+# Instead of fetching TM2Sign on every /live request (slow, especially on bad
+# connections at venues), a daemon thread polls every 45 s and stores the result
+# in _live_cache. The /live page renders from cache (instant). The JS poller
+# calls /live/data?v=<version> which returns a ~30-byte {"changed":false} when
+# nothing changed, or a compact delta of just scores + match IDs when it has.
+
+_live_cache: dict = {"data": None, "version": 0, "hash": ""}
+_live_lock = threading.Lock()
+_REFRESH_INTERVAL = 45       # seconds between TM2 API polls
+_prefetch_started = False
+_prefetch_event_id: int = 0
+_prefetch_team_id: int = 0
+
+
+def _volatile_hash(data: dict) -> str:
+    """Hash only the parts that change mid-match (scores, current/next pointer)."""
+    cm = data.get("current_match")
+    nm = data.get("next_match")
+    volatile = {
+        "cm": cm["id"] if cm else None,
+        "nm": nm["id"] if nm else None,
+        "s": {
+            str(m["id"]): [m["our_scores"], m["opp_scores"],
+                           m["sets_won"], m["sets_lost"],
+                           m["completed"], m["winner"]]
+            for rnd in data.get("rounds", [])
+            for m in rnd["matches"]
+            if m["our_role"] == "playing"
+        },
+    }
+    return hashlib.md5(
+        _json.dumps(volatile, sort_keys=True, default=str).encode()
+    ).hexdigest()[:12]
+
+
+def _do_refresh():
+    try:
+        fresh = get_team_schedule(_prefetch_event_id, _prefetch_team_id)
+        h = _volatile_hash(fresh)
+        with _live_lock:
+            if h != _live_cache["hash"]:
+                _live_cache["version"] += 1
+                _live_cache["hash"] = h
+            _live_cache["data"] = fresh
+    except Exception as exc:
+        log.warning("Live prefetch refresh failed: %s", exc)
+
+
+def _prefetch_worker():
+    while True:
+        time.sleep(_REFRESH_INTERVAL)
+        _do_refresh()
+
+
+def start_live_prefetch(event_id: int, team_id: int):
+    """Start background prefetch. Idempotent — safe to call multiple times."""
+    global _prefetch_started, _prefetch_event_id, _prefetch_team_id
+    if _prefetch_started:
+        return
+    _prefetch_started = True
+    _prefetch_event_id = event_id
+    _prefetch_team_id = team_id
+    _do_refresh()   # blocking: warms cache so first /live request is instant
+    t = threading.Thread(target=_prefetch_worker, daemon=True)
+    t.start()
+    log.info("Live prefetch started — event=%d team=%d interval=%ds",
+             event_id, team_id, _REFRESH_INTERVAL)
+
+
+def get_cached_schedule():
+    """Return (data, version) from the in-memory live cache."""
+    with _live_lock:
+        return _live_cache["data"], _live_cache["version"]
+
+
+def get_live_delta(since_version: int) -> dict:
+    """
+    Compact delta for the JS poller.
+    Returns {"changed": False, "version": n} (~30 bytes) when nothing changed.
+    Returns scores dict + current/next match IDs when data has changed.
+    """
+    with _live_lock:
+        version = _live_cache["version"]
+        data = _live_cache["data"]
+
+    if since_version >= version or not data:
+        return {"changed": False, "version": version}
+
+    cm = data.get("current_match")
+    nm = data.get("next_match")
+
+    scores = {}
+    for rnd in data.get("rounds", []):
+        for m in rnd["matches"]:
+            if m["our_role"] == "playing":
+                scores[str(m["id"])] = {
+                    "our_scores": m["our_scores"],
+                    "opp_scores": m["opp_scores"],
+                    "sets_won": m["sets_won"],
+                    "sets_lost": m["sets_lost"],
+                    "completed": m["completed"],
+                    "winner": m["winner"],
+                }
+
+    return {
+        "changed": True,
+        "version": version,
+        "current_match_id": cm["id"] if cm else None,
+        "next_match_id": nm["id"] if nm else None,
+        "scores": scores,
     }

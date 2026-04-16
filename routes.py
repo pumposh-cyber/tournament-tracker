@@ -647,49 +647,63 @@ No markdown, no explanation. JSON array only."""
 TM2_EVENT_ID = 2170
 TM2_TEAM_ID = 266815
 
+# Warm the cache immediately at startup so the first /live request is instant.
+# The background thread then refreshes every 45 s without blocking any request.
+from tm2_client import start_live_prefetch, get_cached_schedule, get_live_delta
+start_live_prefetch(TM2_EVENT_ID, TM2_TEAM_ID)
+
+
 @app.route("/live")
 def live_dashboard():
-    """Publicly accessible live match dashboard — no login required."""
-    try:
-        from tm2_client import get_team_schedule
-        data = get_team_schedule(TM2_EVENT_ID, TM2_TEAM_ID)
-    except Exception as exc:
-        logging.error("live_dashboard error: %s", exc)
-        data = {"error": str(exc), "rounds": [], "team": {}, "event": {}}
-    return render_template("live_dashboard.html", **data)
+    """Publicly accessible live match dashboard — no login required.
+    Renders from the server-side cache; no TM2 API call on the request path."""
+    data, version = get_cached_schedule()
+    if data is None:
+        data = {"rounds": [], "team": {}, "event": {},
+                "current_match": None, "next_match": None,
+                "error": "Data loading, please refresh in a moment."}
+        version = 0
+
+    # Pre-format match metadata for the JS delta renderer (no datetimes in JSON)
+    def _time(dt):
+        try: return dt.strftime("%-I:%M %p")
+        except Exception: return "TBD"
+    def _day(dt):
+        try: return dt.strftime("%a")
+        except Exception: return ""
+
+    matches_meta = {}
+    for rnd in data.get("rounds", []):
+        for m in rnd["matches"]:
+            matches_meta[m["id"]] = {
+                "id": m["id"],
+                "label": m.get("label", ""),
+                "opponent": m["opponent"],
+                "court": m["court"],
+                "our_role": m["our_role"],
+                "our_scores": m["our_scores"],
+                "opp_scores": m["opp_scores"],
+                "sets_won": m["sets_won"],
+                "sets_lost": m["sets_lost"],
+                "completed": m["completed"],
+                "winner": m["winner"],
+                "time_fmt": _time(m.get("start_time")),
+                "day_fmt": _day(m.get("start_time")),
+            }
+
+    return render_template("live_dashboard.html",
+                           cache_version=version,
+                           matches_meta=matches_meta,
+                           **data)
 
 
 @app.route("/live/data")
 def live_dashboard_data():
-    """JSON endpoint for polling — used by the auto-refresh script."""
+    """Compact delta JSON for the JS poller.
+    Pass ?v=<version> — returns {"changed":false} (~30 bytes) when nothing has
+    changed since that version, or a scores-only delta when data is new."""
     try:
-        from tm2_client import get_team_schedule
-        data = get_team_schedule(TM2_EVENT_ID, TM2_TEAM_ID)
-    except Exception as exc:
-        return jsonify({"error": str(exc)}), 500
-
-    # Serialize datetimes for JSON
-    def _fmt(dt):
-        return dt.isoformat() if dt else None
-
-    rounds_out = []
-    for rnd in data["rounds"]:
-        matches_out = []
-        for m in rnd["matches"]:
-            matches_out.append({
-                **m,
-                "start_time": _fmt(m.get("start_time")),
-                "end_time": _fmt(m.get("end_time")),
-            })
-        rounds_out.append({**rnd, "matches": matches_out})
-
-    cm = data.get("current_match")
-    nm = data.get("next_match")
-    return jsonify({
-        "rounds": rounds_out,
-        "current_match": {**cm, "start_time": _fmt(cm.get("start_time")),
-                          "end_time": _fmt(cm.get("end_time"))} if cm else None,
-        "next_match": {**nm, "start_time": _fmt(nm.get("start_time")),
-                       "end_time": _fmt(nm.get("end_time"))} if nm else None,
-        "fetched_at": datetime.utcnow().isoformat(),
-    })
+        since = int(request.args.get("v", 0))
+    except (ValueError, TypeError):
+        since = 0
+    return jsonify(get_live_delta(since))
