@@ -52,7 +52,7 @@
         Pre-Trip Readiness
       </div>
       <div class="readiness-meta">
-        <span class="readiness-score" id="score-text">0 / 22 complete</span>
+        <span class="readiness-score" id="score-text">0 / 29 complete</span>
         <div class="readiness-bar-wrap"><div class="readiness-bar-fill" id="progress-fill" style="width:0%"></div></div>
         <i class="fas fa-chevron-down readiness-toggle open" id="toggle-icon"></i>
       </div>
@@ -72,33 +72,40 @@
         <div class="readiness-cat">
           <div class="readiness-cat-title"><i class="fas fa-car" style="color:#2563eb"></i> Travel Prep</div>
           <div class="readiness-items">
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Gas tank full night before</span><span class="ri-tag ri-crit">Critical</span></label>
             <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Check road / CalTrans conditions</span><span class="ri-tag ri-crit">Critical</span></label>
-            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Gas up the car</span></label>
-            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Snacks &amp; drinks packed</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Download offline maps + venue address</span></label>
             <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Car charger &amp; phone mount</span></label>
-            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Download offline maps</span><span class="ri-tag ri-opt">Optional</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Drive snacks + drinks packed</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Kids' entertainment: headphones, tablets, books</span><span class="ri-tag ri-opt">Optional</span></label>
           </div>
         </div>
         <div class="readiness-cat">
           <div class="readiness-cat-title"><i class="fas fa-volleyball" style="color:#d97706"></i> Player Gear</div>
           <div class="readiness-items">
-            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Full uniform (2 sets)</span><span class="ri-tag ri-crit">Critical</span></label>
-            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>2 pairs of court shoes</span><span class="ri-tag ri-crit">Critical</span></label>
-            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Kneepads</span><span class="ri-tag ri-crit">Critical</span></label>
-            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Water bottle (filled)</span></label>
-            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Athletic tape / first aid</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>2-3 jerseys (home + away + backup)</span><span class="ri-tag ri-crit">Critical</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>2-3 pairs of spandex shorts</span><span class="ri-tag ri-crit">Critical</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Knee pads + spare pair</span><span class="ri-tag ri-crit">Critical</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Volleyball shoes</span><span class="ri-tag ri-crit">Critical</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Ankle braces (if worn)</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>2-3 pairs of volleyball socks</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Warm-up jacket + pants</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Athletic tape / pre-wrap</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>3 sets of change-of-clothes + pajamas</span></label>
           </div>
         </div>
         <div class="readiness-cat">
           <div class="readiness-cat-title"><i class="fas fa-bag-shopping" style="color:#7c3aed"></i> Parent Essentials</div>
           <div class="readiness-items">
-            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Folding chairs / bleacher cushion</span></label>
-            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Cash for food &amp; parking</span></label>
-            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Sunscreen &amp; layers</span></label>
-            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Phone charger / power bank</span></label>
-            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>AES app / bracket ready</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Camping / folding chairs</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Sideline snacks + small cooler</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Cash (some vendors cash-only)</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Portable phone charger / power bank</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Ear plugs (loud gyms over 3 days)</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Light jacket (convention centers are cold)</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Sunscreen</span></label>
             <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>WhatsApp notifications on</span></label>
-            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Team snack contribution</span><span class="ri-tag ri-opt">Optional</span></label>
+            <label class="readiness-item"><input type="checkbox" onchange="updateProgress()"><span>Laundry pods for hotel (wash jerseys nightly)</span><span class="ri-tag ri-opt">Optional</span></label>
           </div>
         </div>
       </div>
@@ -487,7 +494,7 @@
 </div>
 
 <script>
-const RI_TOTAL = 22;
+const RI_TOTAL = 29;
 function updateProgress() {
   const boxes = document.querySelectorAll('.readiness-item input[type=checkbox]');
   const checked = [...boxes].filter(b => b.checked).length;
