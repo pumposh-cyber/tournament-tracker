@@ -118,6 +118,42 @@ class TripBooking(db.Model):
     tournament = db.relationship("Tournament", backref=db.backref("trip_booking", uselist=False, cascade="all, delete-orphan"))
 
 
+class UserPreferences(db.Model):
+    """Per-user preferences used to personalize AI suggestions."""
+    __tablename__ = "user_preferences"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String, db.ForeignKey("users.id"), unique=True, nullable=False)
+
+    # Travel
+    home_address = db.Column(db.String(300), default="Milpitas, CA 95035")
+    driving_notes = db.Column(db.Text, default="")          # e.g. "prefer In-N-Out stops, stop every 2hrs"
+    car_preference = db.Column(db.String(200), default="")  # e.g. "SUV, Hertz Gold member"
+
+    # Hotel
+    hotel_preference = db.Column(db.String(300), default="")  # e.g. "Marriott, king bed, late checkout"
+    loyalty_programs = db.Column(db.String(300), default="")  # e.g. "Marriott Bonvoy, Hilton Honors"
+
+    # Packing
+    packing_notes = db.Column(db.Text, default="")   # e.g. "always forget chargers; bring knee pads x2"
+
+    # Scheduling
+    scheduling_notes = db.Column(db.Text, default="")  # e.g. "prefer AM wave; arrive 30min early"
+
+    # Weather & gear
+    weather_notes = db.Column(db.Text, default="")    # e.g. "sensitive to cold, bring layers"
+
+    # Food
+    food_notes = db.Column(db.Text, default="")       # e.g. "vegetarian, avoid fast food"
+
+    # Player info
+    player_name = db.Column(db.String(100), default="Tiya Raina")
+    player_number = db.Column(db.String(10), default="13")
+    player_position = db.Column(db.String(100), default="Middle Blocker")
+
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+    user = db.relationship("User", backref=db.backref("preferences", uselist=False))
+
+
 class TournamentAnnouncement(db.Model):
     """Coach / admin announcements imported from WhatsApp via LLM."""
     __tablename__ = "tournament_announcements"

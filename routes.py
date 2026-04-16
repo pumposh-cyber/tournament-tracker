@@ -1,10 +1,10 @@
 import os
 import logging
 from datetime import datetime, timedelta
-from flask import render_template, request, redirect, url_for, flash, session
+from flask import render_template, request, redirect, url_for, flash, session, jsonify
 from flask_login import current_user
 from app import app, db
-from models import Tournament, ChecklistItem, TripBooking, TournamentAnnouncement
+from models import Tournament, ChecklistItem, TripBooking, TournamentAnnouncement, UserPreferences
 from replit_auth import require_login, make_replit_blueprint
 
 app.register_blueprint(make_replit_blueprint(), url_prefix="/auth")
@@ -85,13 +85,17 @@ def tournament_detail(tournament_id):
     checklist_items = ChecklistItem.query.filter_by(tournament_id=tournament_id).all()
     auto_open_chat = not booking and not checklist_items
 
+    # Use user's saved home address if set, otherwise fall back to default
+    prefs = _get_prefs()
+    display_home = prefs.home_address or HOME_LOCATION.get("address", HOME_LOCATION["city"])
+
     return render_template(
         "detail.html",
         tournament=tournament, now=now,
         distance=distance, drive_time=drive_time,
         weather=weather, day_count=day_count,
-        home_city=HOME_LOCATION["city"],
-        home_address=HOME_LOCATION.get("address", HOME_LOCATION["city"]),
+        home_city=display_home,
+        home_address=display_home,
         weather_desc=weather_code_to_description,
         weather_icon=weather_code_to_icon,
         booking=booking,
@@ -301,14 +305,47 @@ def import_announcements(tournament_id):
             if not error:
                 try:
                     _gclient = _genai.Client(api_key=os.environ.get("GOOGLE_API_KEY"))
-                    from datetime import datetime, timedelta
-                    cutoff_date = (datetime.now() - timedelta(days=7)).strftime("%B %d, %Y")
-                    EXTRACT_INSTRUCTIONS = f"""Extract ONLY the most important tournament-related messages from this WhatsApp group chat.
+
+                    # Pre-filter raw chat to last 7 days before sending to Gemini.
+                    # WhatsApp format: [M/D/YY, H:MM:SS AM/PM] Name: message
+                    # This ensures we never send old messages (Jan, Feb...) — only this week.
+                    if raw:
+                        import re as _re
+                        cutoff = datetime.now() - timedelta(days=7)
+                        filtered_lines = []
+                        current_msg_lines = []
+                        current_msg_in_window = False
+                        _date_pat = _re.compile(r'^\[(\d{1,2}/\d{1,2}/\d{2,4}),')
+                        for line in raw.splitlines():
+                            m = _date_pat.match(line)
+                            if m:
+                                # Flush previous message
+                                if current_msg_in_window and current_msg_lines:
+                                    filtered_lines.extend(current_msg_lines)
+                                current_msg_lines = [line]
+                                try:
+                                    msg_date = datetime.strptime(m.group(1), "%m/%d/%y")
+                                except ValueError:
+                                    try:
+                                        msg_date = datetime.strptime(m.group(1), "%m/%d/%Y")
+                                    except ValueError:
+                                        msg_date = cutoff  # fallback: include
+                                current_msg_in_window = msg_date >= cutoff
+                            else:
+                                current_msg_lines.append(line)
+                        # Flush last message
+                        if current_msg_in_window and current_msg_lines:
+                            filtered_lines.extend(current_msg_lines)
+                        chat_to_send = "\n".join(filtered_lines) if filtered_lines else ""
+                    else:
+                        chat_to_send = ""
+
+                    EXTRACT_INSTRUCTIONS = """Extract ONLY the most important tournament-related messages from this WhatsApp group chat.
 
 STRICT RULES:
-1. Only include messages from the last 7 days (after {cutoff_date}). Ignore everything older.
-2. Only include messages DIRECTLY about the upcoming tournament — logistics, schedule, hotel, car, venue, court assignments, warm-up times, uniform, parking, bracket, pool assignments, weather warnings.
-3. IGNORE completely: practice absences ("Sophia has a fever"), sick notices, personal messages, practice schedules, general team news unrelated to the upcoming tournament, casual chat, "thanks", reactions, one-word replies.
+1. ONLY include messages from coaches: "Andrew Nguyen" or "Coach T Rancho". Ignore ALL messages from anyone else — parents, players, unknown senders.
+2. Only include messages DIRECTLY about the upcoming tournament — logistics, schedule, hotel, car, venue, court assignments, warm-up times, uniform, parking, bracket, pool assignments, weather warnings, facility info, directions.
+3. IGNORE completely: practice absences, sick notices, practice schedules, casual chat, "thanks", reactions, one-word replies — even if from a coach.
 
 For each qualifying message return:
 - author: first name only
@@ -318,18 +355,23 @@ For each qualifying message return:
 
 If no qualifying messages exist, return an empty array [].
 Return ONLY a JSON array. No markdown, no explanation. Example:
-[{{"author":"Coach Mike","date":"Apr 14, 7:00 AM","text":"Report time is 7:00 AM Friday at Gate 5. Wear full uniform.","pinned":true}}]"""
+[{"author":"Coach Mike","date":"Apr 14, 7:00 AM","text":"Report time is 7:00 AM Friday at Gate 5. Wear full uniform.","pinned":true}]"""
 
                     if image_data:
                         from google.genai import types as _gtypes
                         img_part = _gtypes.Part.from_bytes(data=image_data[0], mime_type=image_data[1])
                         contents = [img_part, EXTRACT_INSTRUCTIONS + "\n\nExtract from the screenshot above."]
+                    elif chat_to_send:
+                        contents = EXTRACT_INSTRUCTIONS + f"\n\nWhatsApp chat (last 7 days only):\n{chat_to_send[:20000]}"
                     else:
-                        contents = EXTRACT_INSTRUCTIONS + f"\n\nWhatsApp chat:\n{raw[:8000]}"
+                        contents = None
 
-                    response = _gclient.models.generate_content(model="gemini-2.5-flash", contents=contents)
-                    raw_json = response.text.strip().lstrip("```json").lstrip("```").rstrip("```").strip()
-                    extracted = json.loads(raw_json)
+                    if contents is None:
+                        extracted = []
+                    else:
+                        response = _gclient.models.generate_content(model="gemini-2.5-flash", contents=contents)
+                        raw_json = response.text.strip().lstrip("```json").lstrip("```").rstrip("```").strip()
+                        extracted = json.loads(raw_json)
                 except Exception as e:
                     error = f"Parse error: {str(e)}"
 
@@ -432,13 +474,29 @@ def api_chat():
             logging.error(f"Chat error (add mode): {e}")
             return {"response": "I'm having trouble connecting right now. Please try again."}, 200
 
+    prefs = _get_prefs()
+    pref_lines = []
+    if prefs.home_address:     pref_lines.append(f"Home: {prefs.home_address}")
+    if prefs.driving_notes:    pref_lines.append(f"Driving: {prefs.driving_notes}")
+    if prefs.hotel_preference: pref_lines.append(f"Hotel pref: {prefs.hotel_preference}")
+    if prefs.loyalty_programs: pref_lines.append(f"Loyalty: {prefs.loyalty_programs}")
+    if prefs.packing_notes:    pref_lines.append(f"Packing: {prefs.packing_notes}")
+    if prefs.scheduling_notes: pref_lines.append(f"Scheduling: {prefs.scheduling_notes}")
+    if prefs.weather_notes:    pref_lines.append(f"Weather: {prefs.weather_notes}")
+    if prefs.food_notes:       pref_lines.append(f"Food: {prefs.food_notes}")
+
+    player_name = prefs.player_name or TEAM_INFO['player_name']
+    player_num  = prefs.player_number or TEAM_INFO['player_number']
+    player_pos  = prefs.player_position or TEAM_INFO['player_position']
+
     context_parts = [
         "You are VolleyAI, a helpful assistant for parents of youth volleyball players.",
-        f"The team is {TEAM_INFO['name']}. Player: {TEAM_INFO['player_name']}, "
-        f"#{TEAM_INFO['player_number']}, {TEAM_INFO['player_position']}.",
+        f"The team is {TEAM_INFO['name']}. Player: {player_name}, #{player_num}, {player_pos}.",
         "Be concise, warm, and practical. Use **bold** for key info. "
         "Keep responses under 200 words unless more detail is truly needed.",
     ]
+    if pref_lines:
+        context_parts.append("User preferences:\n" + "\n".join(pref_lines))
 
     if tournament_id:
         t = Tournament.query.get(tournament_id)
@@ -485,3 +543,153 @@ def api_chat():
     except Exception as e:
         logging.error(f"Chat error: {e}")
         return {"response": "I'm having trouble connecting right now. Please try again in a moment."}, 200
+
+
+def _get_prefs():
+    """Return current user's UserPreferences, creating a default row if needed."""
+    prefs = UserPreferences.query.filter_by(user_id=current_user.id).first()
+    if not prefs:
+        prefs = UserPreferences(user_id=current_user.id)
+        db.session.add(prefs)
+        db.session.commit()
+    return prefs
+
+
+@app.route("/preferences", methods=["GET", "POST"])
+@require_login
+def user_preferences():
+    prefs = _get_prefs()
+    saved = False
+    if request.method == "POST":
+        prefs.home_address      = request.form.get("home_address", "").strip()
+        prefs.driving_notes     = request.form.get("driving_notes", "").strip()
+        prefs.car_preference    = request.form.get("car_preference", "").strip()
+        prefs.hotel_preference  = request.form.get("hotel_preference", "").strip()
+        prefs.loyalty_programs  = request.form.get("loyalty_programs", "").strip()
+        prefs.packing_notes     = request.form.get("packing_notes", "").strip()
+        prefs.scheduling_notes  = request.form.get("scheduling_notes", "").strip()
+        prefs.weather_notes     = request.form.get("weather_notes", "").strip()
+        prefs.food_notes        = request.form.get("food_notes", "").strip()
+        prefs.player_name       = request.form.get("player_name", "").strip()
+        prefs.player_number     = request.form.get("player_number", "").strip()
+        prefs.player_position   = request.form.get("player_position", "").strip()
+        db.session.commit()
+        saved = True
+    return render_template("preferences.html", prefs=prefs, saved=saved)
+
+
+@app.route("/api/travel_notes/<int:tournament_id>")
+@require_login
+def api_travel_notes(tournament_id):
+    import json as _json
+    from utils import HOME_LOCATION
+    tournament = Tournament.query.get_or_404(tournament_id)
+    tab = request.args.get("tab", "road")  # "road" or "dest"
+
+    prefs = _get_prefs()
+    origin = prefs.home_address or HOME_LOCATION.get("address", HOME_LOCATION["city"])
+    destination = f"{tournament.venue}, {tournament.city}" if tournament.venue else tournament.city
+    city = tournament.city.split(",")[0].strip()
+
+    # Build personalization context from user preferences
+    pref_ctx = []
+    if prefs.driving_notes:   pref_ctx.append(f"Driving preferences: {prefs.driving_notes}")
+    if prefs.food_notes:      pref_ctx.append(f"Food preferences: {prefs.food_notes}")
+    if prefs.weather_notes:   pref_ctx.append(f"Weather/gear notes: {prefs.weather_notes}")
+    if prefs.car_preference:  pref_ctx.append(f"Car: {prefs.car_preference}")
+    pref_str = ("\n" + "\n".join(pref_ctx)) if pref_ctx else ""
+
+    if tab == "road":
+        prompt = f"""You are a helpful travel assistant for a family driving from {origin} to {destination} for a youth volleyball tournament.{pref_str}
+
+Suggest 4-6 practical road stops along the way. Include rest stops, gas stations at good points, food options, and any notable landmarks.
+Factor in the user's preferences above when choosing food stops or rest points.
+Focus on stops that work well for the {origin} → {destination} route specifically.
+
+Return ONLY a JSON array. Each item:
+{{"name": "Stop name", "location": "City, State or highway mile marker", "icon": "font-awesome-icon-name", "tip": "One sentence practical tip"}}
+
+Good icon names: utensils, gas-pump, coffee, tree, store, camera, ice-cream, burger, circle-stop
+No markdown, no explanation. JSON array only."""
+    else:
+        pref_ctx2 = []
+        if prefs.hotel_preference: pref_ctx2.append(f"Hotel preference: {prefs.hotel_preference}")
+        if prefs.food_notes:       pref_ctx2.append(f"Food preferences: {prefs.food_notes}")
+        if prefs.packing_notes:    pref_ctx2.append(f"Packing habits: {prefs.packing_notes}")
+        pref_str2 = ("\n" + "\n".join(pref_ctx2)) if pref_ctx2 else ""
+
+        prompt = f"""You are a helpful travel assistant for a family visiting {city} for a youth volleyball tournament.{pref_str2}
+
+Suggest 4-6 practical tips for their stay in {city}: nearby restaurants (family friendly), big box stores (Target/Walmart for forgotten gear), quick snacks near the venue, and one fun local thing to do if time allows.
+Factor in the user's preferences above.
+
+Return ONLY a JSON array. Each item:
+{{"name": "Place or tip name", "location": "Area or address hint", "icon": "font-awesome-icon-name", "tip": "One sentence practical tip"}}
+
+Good icon names: utensils, store, coffee, ice-cream, camera, map-pin, burger, shopping-cart
+No markdown, no explanation. JSON array only."""
+
+    try:
+        from google import genai as _genai
+        _gc = _genai.Client(api_key=os.environ.get("GOOGLE_API_KEY"))
+        raw = _gc.models.generate_content(model="gemini-2.5-flash", contents=prompt).text.strip()
+        raw = raw.lstrip("```json").lstrip("```").rstrip("```").strip()
+        stops = _json.loads(raw)
+        return {"stops": stops}
+    except Exception as e:
+        logging.error(f"travel_notes error: {e}")
+        return {"stops": [], "error": str(e)}, 200
+
+
+# ── Live Tournament Dashboard (TM2Sign integration) ──────────────────────────
+
+# UVAC Far Westerns 2026 config
+TM2_EVENT_ID = 2170
+TM2_TEAM_ID = 266815
+
+@app.route("/live")
+def live_dashboard():
+    """Publicly accessible live match dashboard — no login required."""
+    try:
+        from tm2_client import get_team_schedule
+        data = get_team_schedule(TM2_EVENT_ID, TM2_TEAM_ID)
+    except Exception as exc:
+        logging.error("live_dashboard error: %s", exc)
+        data = {"error": str(exc), "rounds": [], "team": {}, "event": {}}
+    return render_template("live_dashboard.html", **data)
+
+
+@app.route("/live/data")
+def live_dashboard_data():
+    """JSON endpoint for polling — used by the auto-refresh script."""
+    try:
+        from tm2_client import get_team_schedule
+        data = get_team_schedule(TM2_EVENT_ID, TM2_TEAM_ID)
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+    # Serialize datetimes for JSON
+    def _fmt(dt):
+        return dt.isoformat() if dt else None
+
+    rounds_out = []
+    for rnd in data["rounds"]:
+        matches_out = []
+        for m in rnd["matches"]:
+            matches_out.append({
+                **m,
+                "start_time": _fmt(m.get("start_time")),
+                "end_time": _fmt(m.get("end_time")),
+            })
+        rounds_out.append({**rnd, "matches": matches_out})
+
+    cm = data.get("current_match")
+    nm = data.get("next_match")
+    return jsonify({
+        "rounds": rounds_out,
+        "current_match": {**cm, "start_time": _fmt(cm.get("start_time")),
+                          "end_time": _fmt(cm.get("end_time"))} if cm else None,
+        "next_match": {**nm, "start_time": _fmt(nm.get("start_time")),
+                       "end_time": _fmt(nm.get("end_time"))} if nm else None,
+        "fetched_at": datetime.utcnow().isoformat(),
+    })

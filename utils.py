@@ -4,10 +4,10 @@ import requests
 from datetime import datetime, timedelta
 
 HOME_LOCATION = {
-    "city": "Bay Area, CA",
-    "address": "San Ramon, CA 94583",
-    "latitude": 37.5585,
-    "longitude": -122.2711,
+    "city": "Milpitas, CA",
+    "address": "Milpitas, CA 95035",
+    "latitude": 37.4323,
+    "longitude": -121.8996,
 }
 
 CITY_COORDINATES = {

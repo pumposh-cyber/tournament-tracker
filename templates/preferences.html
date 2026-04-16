@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}My Preferences{% endblock %}
+
+{% block content %}
+<div style="max-width:680px;margin:0 auto;padding:1rem 0 3rem">
+
+  <div style="margin-bottom:1.5rem">
+    <a href="{{ url_for('index') }}" class="back-link"><i class="fas fa-arrow-left"></i> Back</a>
+    <h1 style="font-size:1.6rem;color:var(--text);margin-top:0.5rem">My Profile & Preferences</h1>
+    <p style="color:var(--text-muted);font-size:0.9rem">VolleyAI uses these to personalize road stops, packing lists, scheduling tips, and more.</p>
+  </div>
+
+  {% if saved %}
+  <div class="alert-success" style="background:var(--success-bg,#dcfce7);border:1px solid var(--success-border,#86efac);color:#166534;padding:0.75rem 1rem;border-radius:8px;margin-bottom:1.25rem;font-size:0.9rem">
+    <i class="fas fa-check-circle"></i> Preferences saved!
+  </div>
+  {% endif %}
+
+  <form method="POST" class="tournament-form">
+
+    <div class="pref-section">
+      <h2><i class="fas fa-user"></i> Player</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Player Name</label>
+          <input type="text" name="player_name" value="{{ prefs.player_name or '' }}">
+        </div>
+        <div class="form-group">
+          <label>Jersey Number</label>
+          <input type="text" name="player_number" value="{{ prefs.player_number or '' }}" style="max-width:100px">
+        </div>
+        <div class="form-group">
+          <label>Position</label>
+          <input type="text" name="player_position" value="{{ prefs.player_position or '' }}">
+        </div>
+      </div>
+    </div>
+
+    <div class="pref-section">
+      <h2><i class="fas fa-car"></i> Travel</h2>
+      <div class="form-group">
+        <label>Home Address (used for driving directions &amp; road stops)</label>
+        <input type="text" name="home_address" value="{{ prefs.home_address or '' }}" placeholder="e.g. San Ramon, CA 94583">
+      </div>
+      <div class="form-group">
+        <label>Driving Preferences <span class="pref-hint">How you like to road trip</span></label>
+        <textarea name="driving_notes" rows="2" placeholder="e.g. Stop every 2 hours, prefer In-N-Out, avoid tolls, bring audiobooks">{{ prefs.driving_notes or '' }}</textarea>
+      </div>
+      <div class="form-group">
+        <label>Car Preferences <span class="pref-hint">Type, loyalty program, extras</span></label>
+        <input type="text" name="car_preference" value="{{ prefs.car_preference or '' }}" placeholder="e.g. SUV, Hertz Gold member, need roof rack">
+      </div>
+    </div>
+
+    <div class="pref-section">
+      <h2><i class="fas fa-hotel"></i> Hotel</h2>
+      <div class="form-group">
+        <label>Hotel Preferences <span class="pref-hint">Room type, must-haves</span></label>
+        <input type="text" name="hotel_preference" value="{{ prefs.hotel_preference or '' }}" placeholder="e.g. King bed, late checkout, pool preferred">
+      </div>
+      <div class="form-group">
+        <label>Loyalty Programs</label>
+        <input type="text" name="loyalty_programs" value="{{ prefs.loyalty_programs or '' }}" placeholder="e.g. Marriott Bonvoy #12345, Hilton Honors">
+      </div>
+    </div>
+
+    <div class="pref-section">
+      <h2><i class="fas fa-suitcase-rolling"></i> Packing</h2>
+      <div class="form-group">
+        <label>Packing Notes <span class="pref-hint">What you always bring, what you forget</span></label>
+        <textarea name="packing_notes" rows="2" placeholder="e.g. Always bring: knee pads x2, charger, Pedialyte, snack bag. Often forget: safety pins, hair ties">{{ prefs.packing_notes or '' }}</textarea>
+      </div>
+    </div>
+
+    <div class="pref-section">
+      <h2><i class="fas fa-calendar-clock"></i> Scheduling</h2>
+      <div class="form-group">
+        <label>Scheduling Preferences <span class="pref-hint">Wave preference, arrival habits</span></label>
+        <textarea name="scheduling_notes" rows="2" placeholder="e.g. Prefer AM wave, arrive 45 min before first match, need Friday off work for travel">{{ prefs.scheduling_notes or '' }}</textarea>
+      </div>
+    </div>
+
+    <div class="pref-section">
+      <h2><i class="fas fa-cloud-sun"></i> Weather &amp; Gear</h2>
+      <div class="form-group">
+        <label>Weather Notes <span class="pref-hint">Sensitivities, gear you bring</span></label>
+        <textarea name="weather_notes" rows="2" placeholder="e.g. Sensitive to cold, always bring extra layers, rain jacket in car">{{ prefs.weather_notes or '' }}</textarea>
+      </div>
+    </div>
+
+    <div class="pref-section">
+      <h2><i class="fas fa-utensils"></i> Food</h2>
+      <div class="form-group">
+        <label>Food Preferences <span class="pref-hint">Dietary needs, favorites, avoid</span></label>
+        <textarea name="food_notes" rows="2" placeholder="e.g. Vegetarian, nut allergy, love Chick-fil-A, avoid fast food">{{ prefs.food_notes or '' }}</textarea>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Preferences</button>
+      <a href="{{ url_for('index') }}" class="btn">Cancel</a>
+    </div>
+
+  </form>
+</div>
+
+<style>
+.pref-section { background: var(--surface); border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1rem; box-shadow: var(--shadow-sm); }
+.pref-section h2 { font-size: 0.95rem; font-weight: 700; color: var(--text); margin: 0 0 1rem; display: flex; align-items: center; gap: 0.5rem; }
+.pref-section h2 i { color: var(--primary); width: 1rem; }
+.pref-hint { font-weight: 400; font-size: 0.78rem; color: var(--text-muted); margin-left: 0.3rem; }
+</style>
+{% endblock %}

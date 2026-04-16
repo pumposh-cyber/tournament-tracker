@@ -29,6 +29,7 @@
             <a href="{{ url_for('index') }}" class="nav-brand"><i class="fas fa-volleyball"></i> Urban 15U Tracker</a>
             <div class="nav-links">
                 {% if current_user.is_authenticated %}
+                <a href="{{ url_for('live_dashboard') }}" class="nav-link nav-link-live"><i class="fas fa-circle-play"></i> Live</a>
                 <a href="https://www.ncva.com" target="_blank" rel="noopener" class="nav-link">NCVA</a>
                 <a href="https://www.ncva.com/events" target="_blank" rel="noopener" class="nav-link">Events</a>
                 <a href="{{ team_info.ncva_points_url }}" target="_blank" rel="noopener" class="nav-link"><i class="fas fa-trophy"></i> Power League</a>
@@ -41,6 +42,7 @@
                     <div class="user-avatar-placeholder"><i class="fas fa-user"></i></div>
                     {% endif %}
                     <span class="user-name">{{ current_user.first_name or current_user.email or 'Parent' }}</span>
+                    <a href="{{ url_for('user_preferences') }}" class="btn btn-small" title="My Preferences"><i class="fas fa-sliders"></i></a>
                     <a href="{{ url_for('replit_auth.logout') }}" class="btn btn-small btn-logout">Sign Out</a>
                 </div>
                 {% endif %}
@@ -375,5 +377,6 @@
         });
     }
     </script>
+    {% block extra_scripts %}{% endblock %}
 </body>
 </html>

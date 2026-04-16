@@ -8,6 +8,8 @@ wheels/
 
 # Virtual environments
 .venv
+venv/
+venv3/
 
 # Database
 instance/
@@ -15,3 +17,13 @@ instance/
 
 # Environment
 .env
+
+# Local dev scripts
+resume.sh
+
+# Standalone HTML previews (prototyping artifacts)
+preview_a.html
+preview_b.html
+preview_c.html
+trip_booking_form.html
+trip_dashboard.html

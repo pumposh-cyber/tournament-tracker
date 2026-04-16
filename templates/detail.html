@@ -225,10 +225,16 @@
             <div class="roadtrip-tab" onclick="switchTab('dest')"><i class="fas fa-location-dot"></i> In {{ tournament.city.split(',')[0] }}</div>
           </div>
           <div class="roadtrip-pane active" id="pane-road">
-            <p class="roadtrip-placeholder"><i class="fas fa-route"></i> Road stops and points of interest along the way to {{ tournament.city }} will appear here. <a href="{{ url_for('trip_booking', tournament_id=tournament.id) }}">Add travel notes</a> to customize.</p>
+            <div id="road-loading" class="roadtrip-ai-loading">
+              <i class="fas fa-spinner fa-spin"></i> Generating road stops with AI…
+            </div>
+            <div id="road-content" style="display:none"></div>
           </div>
           <div class="roadtrip-pane" id="pane-dest">
-            <p class="roadtrip-placeholder"><i class="fas fa-map-pin"></i> Local restaurants, big box stores, and fun facts about {{ tournament.city.split(',')[0] }} will appear here. <a href="{{ url_for('trip_booking', tournament_id=tournament.id) }}">Add destination notes</a>.</p>
+            <div id="dest-loading" class="roadtrip-ai-loading">
+              <i class="fas fa-spinner fa-spin"></i> Generating destination tips with AI…
+            </div>
+            <div id="dest-content" style="display:none"></div>
           </div>
         </div>
         {% endif %}
@@ -519,5 +525,57 @@ function switchTab(tab) {
   if (pane) pane.classList.add('active');
 }
 if (document.getElementById('score-text')) updateProgress();
+
+// ── AI Road Trip Notes ──────────────────────────────────────────
+{% if distance is not none and distance > 50 %}
+(function() {
+  var TOURNAMENT_ID = {{ tournament.id }};
+  var loaded = {road: false, dest: false};
+
+  function renderStops(stops, contentEl, loadingEl) {
+    loadingEl.style.display = 'none';
+    if (!stops || stops.length === 0) {
+      contentEl.innerHTML = '<p class="roadtrip-placeholder">No suggestions found.</p>';
+    } else {
+      contentEl.innerHTML = stops.map(function(s) {
+        return '<div class="roadtrip-stop">' +
+          '<div class="roadtrip-stop-icon"><i class="fas fa-' + (s.icon || 'map-pin') + '"></i></div>' +
+          '<div class="roadtrip-stop-body">' +
+            '<strong>' + s.name + '</strong>' +
+            (s.location ? '<span class="roadtrip-stop-loc"> &mdash; ' + s.location + '</span>' : '') +
+            '<p>' + s.tip + '</p>' +
+          '</div></div>';
+      }).join('');
+    }
+    contentEl.style.display = 'block';
+  }
+
+  function loadTab(tab) {
+    if (loaded[tab]) return;
+    loaded[tab] = true;
+    fetch('/api/travel_notes/' + TOURNAMENT_ID + '?tab=' + tab)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        renderStops(data.stops,
+          document.getElementById(tab + '-content'),
+          document.getElementById(tab + '-loading'));
+      })
+      .catch(function(err) {
+        var el = document.getElementById(tab + '-loading');
+        if (el) el.innerHTML = '<p class="roadtrip-placeholder"><i class="fas fa-triangle-exclamation"></i> Could not load suggestions. ' + err + '</p>';
+      });
+  }
+
+  // Load "road" immediately (it's the default visible tab)
+  loadTab('road');
+
+  // Patch switchTab to lazy-load dest tab on first open
+  var _origSwitch = switchTab;
+  switchTab = function(tab) {
+    _origSwitch(tab);
+    loadTab(tab);
+  };
+})();
+{% endif %}
 </script>
 {% endblock %}
