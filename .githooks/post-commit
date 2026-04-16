@@ -1,0 +1,3 @@
+#!/bin/sh
+# Auto-push every commit to GitHub origin/main
+git push origin main

@@ -16,7 +16,7 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python3 main.py"
+args = "git config core.hooksPath .githooks && python3 main.py"
 
 [gitHubImport]
 requiredFiles = [".replit", "main.py"]
