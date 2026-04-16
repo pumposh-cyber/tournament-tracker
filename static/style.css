@@ -2480,3 +2480,130 @@ footer a:hover {
 [data-theme="dark"] .nav-link-live {
   color: #f87171 !important;
 }
+
+/* ── 1. Day W/L record ───────────────────────────────────────────────────── */
+.live-day-record {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.35rem 0.75rem;
+  margin-bottom: 0.5rem;
+}
+.live-record-w { color: #16a34a; }
+.live-record-sep { color: var(--text-muted); font-weight: 400; }
+.live-record-l { color: var(--danger); }
+[data-theme="dark"] .live-record-w { color: #4ade80; }
+
+/* ── 2. Work team explanation note ──────────────────────────────────────── */
+.live-work-note {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+  font-style: italic;
+}
+
+/* ── 3. Pending round ETA ────────────────────────────────────────────────── */
+.live-eta {
+  display: inline-block;
+  margin-top: 0.35rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ── 4. Share toast notification ────────────────────────────────────────── */
+.live-share-toast {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #16a34a;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.6rem 1.25rem;
+  border-radius: 999px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* ── 5. Hotel quick-access strip ────────────────────────────────────────── */
+.live-hotel-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.65rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  flex-wrap: wrap;
+}
+.live-hotel-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  color: var(--text-primary);
+}
+.live-hotel-left .fa-bed { color: var(--primary); }
+.live-hotel-name { font-weight: 600; }
+.live-hotel-times { color: var(--text-muted); }
+.live-hotel-link {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.live-hotel-link:hover { text-decoration: underline; }
+
+/* ── 1. Pool standings table ─────────────────────────────────────────────── */
+.live-standings {
+  margin: 0.75rem 0 0.25rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+.live-standings-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+.live-standings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.live-standings-table th {
+  text-align: left;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 0.2rem 0.4rem;
+  border-bottom: 1px solid var(--border);
+}
+.live-standings-table td {
+  padding: 0.3rem 0.4rem;
+  border-bottom: 1px solid var(--border-light, var(--border));
+}
+.live-standings-table tr:last-child td { border-bottom: none; }
+.live-standings-name { font-weight: 500; }
+.live-standings-sets { color: var(--text-muted); font-size: 0.8rem; }
+.live-standings-us td {
+  background: rgba(37,99,235,0.07);
+  font-weight: 700;
+}
+.live-standings-us .live-standings-name { color: var(--primary); }
+[data-theme="dark"] .live-standings-us td { background: rgba(96,165,250,0.1); }

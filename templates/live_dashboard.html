@@ -16,6 +16,15 @@
       </p>
     </div>
     <div class="live-header-right">
+      {# ── 1. Win/loss record ── #}
+      {% set total_played = (day_wins or 0) + (day_losses or 0) %}
+      {% if total_played > 0 %}
+      <div class="live-day-record">
+        <span class="live-record-w">{{ day_wins or 0 }}W</span>
+        <span class="live-record-sep">–</span>
+        <span class="live-record-l">{{ day_losses or 0 }}L</span>
+      </div>
+      {% endif %}
       <div class="live-refresh-indicator" id="refresh-indicator">
         <i class="fas fa-rotate"></i>
         <span id="refresh-countdown">30</span>s
@@ -27,6 +36,25 @@
   <div class="live-error">
     <i class="fas fa-triangle-exclamation"></i>
     Could not load live data. Will retry automatically.
+  </div>
+  {% endif %}
+
+  {# ── 5. Hotel quick-access strip ── #}
+  {% if hotel_info and hotel_info.hotel_name %}
+  <div class="live-hotel-strip">
+    <div class="live-hotel-left">
+      <i class="fas fa-bed"></i>
+      <span class="live-hotel-name">{{ hotel_info.hotel_name }}</span>
+      {% if hotel_info.hotel_checkin or hotel_info.hotel_checkout %}
+      <span class="live-hotel-times">
+        {% if hotel_info.hotel_checkin %}Check-in {{ hotel_info.hotel_checkin }}{% endif %}
+        {% if hotel_info.hotel_checkout %} · Check-out {{ hotel_info.hotel_checkout }}{% endif %}
+      </span>
+      {% endif %}
+    </div>
+    <a href="{{ url_for('tournament_detail', tournament_id=hotel_info.tournament_id) }}" class="live-hotel-link">
+      Full details <i class="fas fa-chevron-right"></i>
+    </a>
   </div>
   {% endif %}
 
@@ -128,8 +156,10 @@
             <span class="live-opp-label">vs</span>
             <span class="live-opp-name">{{ m.opponent }}</span>
             {% else %}
+            {# 2. Work team explanation #}
             <span class="live-opp-label">Ref:</span>
             <span class="live-opp-name live-opp-small">{{ m.opponent }}</span>
+            <span class="live-work-note">UVAC runs scoreboard &amp; line judges for this match</span>
             {% endif %}
           </div>
 
@@ -178,10 +208,37 @@
       {% endfor %}
     </div>
 
+    {# ── 1. Pool standings (shown after at least one result) ── #}
+    {% if rnd.standings and rnd.standings | selectattr('wins') | list | length > 0 %}
+    <div class="live-standings">
+      <div class="live-standings-title">Pool Standings</div>
+      <table class="live-standings-table">
+        <thead>
+          <tr><th>#</th><th>Team</th><th>W</th><th>L</th><th>Sets</th></tr>
+        </thead>
+        <tbody>
+          {% for s in rnd.standings %}
+          <tr class="{{ 'live-standings-us' if s.is_us else '' }}">
+            <td>{{ loop.index }}</td>
+            <td class="live-standings-name">{{ '★ ' if s.is_us else '' }}{{ s.team_name }}</td>
+            <td>{{ s.wins }}</td>
+            <td>{{ s.losses }}</td>
+            <td class="live-standings-sets">{{ s.set_wins }}-{{ s.set_losses }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
     {% elif rnd.status == 'pending' %}
+    {# 3. TBD round with estimated time #}
     <div class="live-pending-msg">
       <i class="fas fa-hourglass-start"></i>
       Bracket placement determined after {{ rounds[loop.index0 - 1].name if loop.index0 > 0 else 'previous round' }} results.
+      {% if rnd.estimated_available_at %}
+      <span class="live-eta">Check back around {{ rnd.estimated_available_at.strftime('%-I:%M %p') }}.</span>
+      {% endif %}
     </div>
     {% endif %}
   </div>
@@ -195,6 +252,13 @@
     <a href="https://tm2sign.com/app/event/{{ event.id }}/division/10559/team/266815" target="_blank" rel="noopener" class="btn btn-small btn-primary">
       <i class="fas fa-external-link-alt"></i> TM2Sign
     </a>
+    {# 4. Share/copy link button #}
+    <button class="btn btn-small" id="share-btn" onclick="copyLiveLink()">
+      <i class="fas fa-share-nodes"></i> Share Live
+    </button>
+  </div>
+  <div id="share-toast" class="live-share-toast" style="display:none">
+    <i class="fas fa-check"></i> Link copied!
   </div>
 
 </div>
@@ -206,12 +270,36 @@
   'use strict';
 
   // ── Server-rendered state ───────────────────────────────────────────────────
-  // matchesMeta: {matchId: {id, opponent, court, our_role, our_scores, opp_scores,
-  //               sets_won, sets_lost, completed, winner, time_fmt, day_fmt}}
   var matchesMeta = {{ matches_meta | tojson }};
   var currentVersion = {{ cache_version }};
   var currentMatchId = {{ current_match.id if current_match else 'null' }};
   var nextMatchId    = {{ next_match.id if next_match else 'null' }};
+
+  // ── 4. Share live link ──────────────────────────────────────────────────────
+  window.copyLiveLink = function() {
+    var url = window.location.href.split('?')[0];
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(showToast);
+    } else {
+      // Fallback for older browsers / iOS
+      var ta = document.createElement('textarea');
+      ta.value = url;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast();
+    }
+  };
+
+  function showToast() {
+    var t = document.getElementById('share-toast');
+    if (!t) return;
+    t.style.display = 'block';
+    setTimeout(function() { t.style.display = 'none'; }, 2500);
+  }
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
   function esc(s) {
@@ -260,21 +348,18 @@
     '</div>';
   }
 
-  // ── Update individual match card (scores + outcome badge) ───────────────────
+  // ── Update individual match card ────────────────────────────────────────────
   function updateMatchCard(mid, scores) {
     var card = document.querySelector('[data-match-id="' + mid + '"]');
     if (!card) return;
 
-    // Update match metadata cache
     var meta = matchesMeta[mid] || {};
     Object.assign(meta, scores);
     matchesMeta[mid] = meta;
 
-    // Scores div
     var scoresEl = document.getElementById('match-scores-' + mid);
     if (scoresEl) scoresEl.innerHTML = miniScoresHtml(meta);
 
-    // Outcome badge
     var outcomeEl = document.getElementById('match-outcome-' + mid);
     if (outcomeEl) {
       if (scores.winner === 'us') {
@@ -294,7 +379,6 @@
       }
     }
 
-    // Card CSS classes
     card.classList.toggle('live-match-completed', !!scores.completed);
     card.classList.toggle('live-match-won',       scores.winner === 'us');
     card.classList.toggle('live-match-lost',      scores.winner === 'them');
@@ -329,15 +413,13 @@
       '</div>';
   }
 
-  // ── Apply a delta from /live/data ───────────────────────────────────────────
+  // ── Apply delta ─────────────────────────────────────────────────────────────
   function applyDelta(delta) {
-    // Update each changed match card
     var scores = delta.scores || {};
     Object.keys(scores).forEach(function(mid) {
       updateMatchCard(mid, scores[mid]);
     });
 
-    // Re-render now/next card only if the active match changed
     var newCM = delta.current_match_id;
     var newNM = delta.next_match_id;
     if (newCM !== currentMatchId || newNM !== nextMatchId) {
@@ -353,9 +435,6 @@
   }
 
   // ── Polling loop ─────────────────────────────────────────────────────────────
-  // Fetches /live/data?v=<version> every 30 s.
-  // Server returns {"changed":false} (~30 bytes) if nothing changed — tiny on
-  // bad venue wifi. Only updates DOM when data actually changed.
   var POLL_SEC = 30;
   var countdown = POLL_SEC;
   var countdownEl = document.getElementById('refresh-countdown');
@@ -380,7 +459,7 @@
         currentVersion = delta.version;
         if (delta.changed) applyDelta(delta);
       })
-      .catch(function() { /* silently skip on bad connection */ });
+      .catch(function() {});
   }
 
 })();

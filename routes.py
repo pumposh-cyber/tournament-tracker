@@ -691,9 +691,36 @@ def live_dashboard():
                 "day_fmt": _day(m.get("start_time")),
             }
 
+    # Hotel quick-access: find the nearest active/upcoming tournament's booking
+    hotel_info = None
+    try:
+        today = datetime.now().date()
+        upcoming = (Tournament.query
+                    .filter(Tournament.is_cancelled == False)
+                    .order_by(Tournament.date_start.asc())
+                    .all())
+        active_t = next(
+            (t for t in upcoming if t.date_end.date() >= today),
+            None
+        )
+        if active_t and active_t.trip_booking:
+            b = active_t.trip_booking
+            hotel_info = {
+                "tournament_id": active_t.id,
+                "hotel_name": b.hotel_name or "",
+                "hotel_address": b.hotel_address or "",
+                "hotel_checkin": b.hotel_checkin or "",
+                "hotel_checkout": b.hotel_checkout or "",
+                "parking_tips": b.parking_tips or "",
+                "food_notes": b.food_notes or "",
+            }
+    except Exception:
+        pass  # DB not available (e.g. local dev without DB)
+
     return render_template("live_dashboard.html",
                            cache_version=version,
                            matches_meta=matches_meta,
+                           hotel_info=hotel_info,
                            **data)
 
 

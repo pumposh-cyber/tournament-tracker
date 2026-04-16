@@ -203,14 +203,14 @@ def get_team_schedule(event_id: int, team_id: int) -> dict:
 
         matches_raw = _get_matches_for_bracket(event_id, pool_bracket_id)
 
-        # Collect all team IDs we need to resolve
+        # Collect ALL team IDs in the bracket (for standings + name resolution)
         team_ids_needed = set()
         for m in matches_raw:
             for field in ["position_one_scheduler_team_id",
                           "position_two_scheduler_team_id",
                           "work_team_scheduler_team_id"]:
                 v = m.get(field)
-                if v and v != team_id:
+                if v:
                     team_ids_needed.add(v)
 
         team_names = _resolve_team_names(team_ids_needed)
@@ -294,6 +294,41 @@ def get_team_schedule(event_id: int, team_id: int) -> dict:
                 "is_published": m.get("is_published", False),
             })
 
+        # ── Pool standings — derive W/L from completed match results ─────────
+        pool_records = {}
+        for m in matches_raw:
+            p1 = m.get("position_one_scheduler_team_id")
+            p2 = m.get("position_two_scheduler_team_id")
+            if not (p1 and p2):
+                continue
+            for tid in (p1, p2):
+                if tid not in pool_records:
+                    pool_records[tid] = {"wins": 0, "losses": 0,
+                                         "set_wins": 0, "set_losses": 0}
+            if not m.get("completed_time"):
+                continue
+            winner_tid = m.get("winning_scheduler_team_id")
+            if not winner_tid:
+                continue
+            loser_tid = p2 if winner_tid == p1 else p1
+            pool_records[winner_tid]["wins"] += 1
+            pool_records[loser_tid]["losses"] += 1
+            # Prefix-aware set tallies
+            for pos, tid in [("position_one", p1), ("position_two", p2)]:
+                sw = m.get(f"{pos}_match_set_wins") or 0
+                sl = m.get(f"{pos}_match_set_losses") or 0
+                pool_records[tid]["set_wins"] += sw
+                pool_records[tid]["set_losses"] += sl
+
+        standings = sorted(
+            [{"team_id": tid,
+              "team_name": team_names.get(tid, f"Team {tid}"),
+              "is_us": tid == team_id,
+              **rec}
+             for tid, rec in pool_records.items()],
+            key=lambda x: (-x["wins"], -x["set_wins"], x["team_name"]),
+        )
+
         rounds_out.append({
             "id": round_id,
             "name": rnd["name"],
@@ -301,9 +336,30 @@ def get_team_schedule(event_id: int, team_id: int) -> dict:
             "pool_bracket_id": pool_bracket_id,
             "pool_bracket_label": seed_info.get("current_position_friendly_label", ""),
             "matches": matches_out,
+            "standings": standings,
             "seed_info": seed_info,
             "status": "active",
         })
+
+    # Estimated time pending rounds become available (max end_time of prior round + 30 min)
+    from datetime import timedelta
+    for i, rnd in enumerate(rounds_out):
+        if rnd["status"] == "pending" and i > 0:
+            prior_matches = rounds_out[i - 1].get("matches", [])
+            max_end = None
+            for m in prior_matches:
+                et = m.get("end_time")
+                if et:
+                    et_aware = et if et.tzinfo else et.replace(tzinfo=timezone.utc)
+                    if max_end is None or et_aware > max_end:
+                        max_end = et_aware
+            rnd["estimated_available_at"] = (max_end + timedelta(minutes=30)) if max_end else None
+
+    # Overall day W/L record across all rounds
+    day_wins = sum(1 for r in rounds_out for m in r["matches"]
+                   if m["our_role"] == "playing" and m["winner"] == "us")
+    day_losses = sum(1 for r in rounds_out for m in r["matches"]
+                     if m["our_role"] == "playing" and m["winner"] == "them")
 
     # Determine current and next match
     current_match = None
@@ -330,6 +386,8 @@ def get_team_schedule(event_id: int, team_id: int) -> dict:
         "team": team,
         "rounds": rounds_out,
         "now": now,
+        "day_wins": day_wins,
+        "day_losses": day_losses,
         "current_match": current_match,
         "next_match": next_match,
     }
